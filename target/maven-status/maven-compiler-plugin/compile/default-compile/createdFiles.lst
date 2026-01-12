@@ -1,0 +1,9 @@
+com\minimarket\entity\Usuario.class
+com\minimarket\config\SecurityConfig.class
+com\minimarket\MinimarketApplication.class
+com\minimarket\entity\ERole.class
+com\minimarket\controller\TestController.class
+com\minimarket\entity\Role.class
+com\minimarket\config\DataLoader.class
+com\minimarket\repository\RoleRepository.class
+com\minimarket\repository\UsuarioRepository.class
