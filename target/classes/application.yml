@@ -5,45 +5,54 @@ spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/minimarket_db
     username: postgres
-    password: john.007  # Cambia esto por tu password real
+    password: john.007
     driver-class-name: org.postgresql.Driver
     hikari:
-      connection-timeout: 30000
       maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
 
   jpa:
     hibernate:
-      ddl-auto: update  # En producción cambia a 'validate' o 'none'
-    show-sql: true
+      ddl-auto: update
+    show-sql: false
     properties:
       hibernate:
         format_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
     open-in-view: false
-
-  # sql:
-  #   init:
-  #     mode: always  # Para cargar data.sql
-  #     platform: postgresql
 
 server:
   port: 8080
   servlet:
     context-path: /api
+  error:
+    include-message: always
+    include-binding-errors: always
+    include-stacktrace: on_param
 
-# Configuración JWT
-app:
-  jwt:
-    secret: miClaveSuperSecretaParaJWTMinimarket2024QueDebeSerMuyLargaParaSeguridad1234567890
-    expiration: 86400000  # 24 horas en milisegundos
+# JWT CONFIGURATION
+jwt:
+  secret: minimarketSecretKey1234567890minimarketSecretKey1234567890
+  expiration: 86400000  # 24 horas en milisegundos
 
-# Configuración de logging
+# LOGGING CONFIGURATION
 logging:
   level:
+    root: INFO
     com.minimarket: DEBUG
     org.springframework.security: INFO
+    org.springframework.web: DEBUG
     org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
     file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/minimarket-backend.log
+    max-size: 10MB
+    max-history: 30

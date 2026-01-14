@@ -1,9 +1,9 @@
 package com.minimarket.entity;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
+// import jakarta.validation.constraints.Email;
+// import jakarta.validation.constraints.NotBlank;
+// import jakarta.validation.constraints.Size;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -18,13 +18,13 @@ public class Usuario {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    @NotBlank
-    @Size(max = 20)
+    // @NotBlank
+    // @Size(max = 20)
     @Column(unique = true, nullable = false)
     private String username;
     
-    @NotBlank
-    @Size(max = 120)
+    // @NotBlank
+    // @Size(max = 120)
     @Column(nullable = false)
     private String password;
     
