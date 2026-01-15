@@ -263,3 +263,90 @@
 2026-01-14 18:40:57 [http-nio-8080-exec-1] INFO  o.s.web.servlet.DispatcherServlet - Completed initialization in 3 ms
 2026-01-14 18:40:57 [http-nio-8080-exec-1] ERROR c.m.security.jwt.AuthEntryPointJwt - Unauthorized error: Full authentication is required to access this resource
 2026-01-14 18:40:58 [http-nio-8080-exec-2] ERROR c.m.security.jwt.AuthEntryPointJwt - Unauthorized error: Full authentication is required to access this resource
+2026-01-14 19:07:30 [restartedMain] INFO  c.minimarket.MinimarketApplication - Starting MinimarketApplication using Java 17.0.17 with PID 23664 (C:\Users\Nvidia\Desktop\minimarket_backend\target\classes started by Nvidia in C:\Users\Nvidia\Desktop\minimarket_backend)
+2026-01-14 19:07:30 [restartedMain] DEBUG c.minimarket.MinimarketApplication - Running with Spring Boot v3.2.4, Spring v6.1.5
+2026-01-14 19:07:30 [restartedMain] INFO  c.minimarket.MinimarketApplication - No active profile set, falling back to 1 default profile: "default"
+2026-01-14 19:07:30 [restartedMain] INFO  o.s.b.d.e.DevToolsPropertyDefaultsPostProcessor - Devtools property defaults active! Set 'spring.devtools.add-properties' to 'false' to disable
+2026-01-14 19:07:30 [restartedMain] INFO  o.s.b.d.e.DevToolsPropertyDefaultsPostProcessor - For additional web related logging consider setting the 'logging.level.web' property to 'DEBUG'
+2026-01-14 19:07:31 [restartedMain] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-01-14 19:07:31 [restartedMain] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 43 ms. Found 2 JPA repository interfaces.
+2026-01-14 19:07:31 [restartedMain] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat initialized with port 8080 (http)
+2026-01-14 19:07:31 [restartedMain] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2026-01-14 19:07:31 [restartedMain] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.19]
+2026-01-14 19:07:31 [restartedMain] INFO  o.a.c.c.C.[.[localhost].[/api] - Initializing Spring embedded WebApplicationContext
+2026-01-14 19:07:31 [restartedMain] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 1162 ms
+2026-01-14 19:07:31 [restartedMain] INFO  o.h.jpa.internal.util.LogHelper - HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-01-14 19:07:31 [restartedMain] INFO  org.hibernate.Version - HHH000412: Hibernate ORM core version 6.4.4.Final
+2026-01-14 19:07:31 [restartedMain] INFO  o.h.c.i.RegionFactoryInitiator - HHH000026: Second-level cache disabled
+2026-01-14 19:07:31 [restartedMain] INFO  o.s.o.j.p.SpringPersistenceUnitInfo - No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-01-14 19:07:32 [restartedMain] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Starting...
+2026-01-14 19:07:32 [restartedMain] INFO  com.zaxxer.hikari.pool.HikariPool - HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@3f486008
+2026-01-14 19:07:32 [restartedMain] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Start completed.
+2026-01-14 19:07:32 [restartedMain] WARN  org.hibernate.orm.deprecation - HHH90000025: PostgreSQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-01-14 19:07:32 [restartedMain] INFO  o.h.e.t.j.p.i.JtaPlatformInitiator - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-01-14 19:07:32 [restartedMain] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-01-14 19:07:33 [restartedMain] DEBUG c.m.security.jwt.JwtAuthFilter - Filter 'jwtAuthFilter' configured for use
+2026-01-14 19:07:33 [restartedMain] DEBUG o.s.w.s.m.m.a.RequestMappingHandlerMapping - 11 mappings in 'requestMappingHandlerMapping'
+2026-01-14 19:07:33 [restartedMain] DEBUG o.s.w.s.h.SimpleUrlHandlerMapping - Patterns [/webjars/**, /**] in 'resourceHandlerMapping'
+2026-01-14 19:07:33 [restartedMain] INFO  o.s.s.web.DefaultSecurityFilterChain - Will secure any request with [org.springframework.security.web.session.DisableEncodeUrlFilter@aec8466, org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter@447e4e5c, org.springframework.security.web.context.SecurityContextHolderFilter@35f73bf8, org.springframework.security.web.header.HeaderWriterFilter@df0e61e, org.springframework.web.filter.CorsFilter@5d26412c, org.springframework.security.web.authentication.logout.LogoutFilter@790f4b91, com.minimarket.security.jwt.JwtAuthFilter@6f189cd0, org.springframework.security.web.savedrequest.RequestCacheAwareFilter@7ed1c5a3, org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter@71a2e9d7, org.springframework.security.web.authentication.AnonymousAuthenticationFilter@10c03745, org.springframework.security.web.session.SessionManagementFilter@60254017, org.springframework.security.web.access.ExceptionTranslationFilter@503b0d8d, org.springframework.security.web.access.intercept.AuthorizationFilter@56e317f0]
+2026-01-14 19:07:33 [restartedMain] DEBUG o.s.w.s.m.m.a.RequestMappingHandlerAdapter - ControllerAdvice beans: 0 @ModelAttribute, 0 @InitBinder, 1 RequestBodyAdvice, 1 ResponseBodyAdvice
+2026-01-14 19:07:33 [restartedMain] DEBUG o.s.w.s.m.m.a.ExceptionHandlerExceptionResolver - ControllerAdvice beans: 0 @ExceptionHandler, 1 ResponseBodyAdvice
+2026-01-14 19:07:33 [restartedMain] INFO  o.s.b.d.a.OptionalLiveReloadServer - LiveReload server is running on port 35729
+2026-01-14 19:07:33 [restartedMain] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat started on port 8080 (http) with context path '/api'
+2026-01-14 19:07:33 [restartedMain] INFO  c.minimarket.MinimarketApplication - Started MinimarketApplication in 3.824 seconds (process running for 4.145)
+2026-01-14 19:07:33 [restartedMain] INFO  com.minimarket.config.DataLoader - === INICIANDO CARGA DE DATOS ===
+2026-01-14 19:07:33 [restartedMain] DEBUG org.hibernate.SQL - 
+    select
+        r1_0.id,
+        r1_0.nombre 
+    from
+        roles r1_0 
+    where
+        r1_0.nombre=?
+2026-01-14 19:07:34 [restartedMain] DEBUG com.minimarket.config.DataLoader - Rol ya existe: ADMIN
+2026-01-14 19:07:34 [restartedMain] DEBUG org.hibernate.SQL - 
+    select
+        r1_0.id,
+        r1_0.nombre 
+    from
+        roles r1_0 
+    where
+        r1_0.nombre=?
+2026-01-14 19:07:34 [restartedMain] DEBUG com.minimarket.config.DataLoader - Rol ya existe: VENDEDOR
+2026-01-14 19:07:34 [restartedMain] DEBUG org.hibernate.SQL - 
+    select
+        r1_0.id,
+        r1_0.nombre 
+    from
+        roles r1_0 
+    where
+        r1_0.nombre=?
+2026-01-14 19:07:34 [restartedMain] DEBUG com.minimarket.config.DataLoader - Rol ya existe: ALMACENERO
+2026-01-14 19:07:34 [restartedMain] INFO  com.minimarket.config.DataLoader - ? Roles verificados/creados: ADMIN, VENDEDOR, ALMACENERO
+2026-01-14 19:07:34 [restartedMain] DEBUG org.hibernate.SQL - 
+    select
+        u1_0.id,
+        u1_0.activo,
+        u1_0.password,
+        u1_0.username 
+    from
+        usuarios u1_0 
+    where
+        u1_0.username=?
+2026-01-14 19:07:34 [restartedMain] INFO  com.minimarket.config.DataLoader - ? Usuario admin ya existe
+2026-01-14 19:07:34 [restartedMain] INFO  com.minimarket.config.DataLoader -   Username: admin
+2026-01-14 19:07:34 [restartedMain] INFO  com.minimarket.config.DataLoader -   Password: admin123
+2026-01-14 19:07:34 [restartedMain] INFO  com.minimarket.config.DataLoader - === CARGA DE DATOS COMPLETADA ===
+
+2026-01-14 19:07:47 [http-nio-8080-exec-1] INFO  o.a.c.c.C.[.[localhost].[/api] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-01-14 19:07:47 [http-nio-8080-exec-1] INFO  o.s.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-01-14 19:07:47 [http-nio-8080-exec-1] DEBUG o.s.web.servlet.DispatcherServlet - Detected StandardServletMultipartResolver
+2026-01-14 19:07:47 [http-nio-8080-exec-1] DEBUG o.s.web.servlet.DispatcherServlet - Detected AcceptHeaderLocaleResolver
+2026-01-14 19:07:47 [http-nio-8080-exec-1] DEBUG o.s.web.servlet.DispatcherServlet - Detected FixedThemeResolver
+2026-01-14 19:07:47 [http-nio-8080-exec-1] DEBUG o.s.web.servlet.DispatcherServlet - Detected org.springframework.web.servlet.view.DefaultRequestToViewNameTranslator@637fbe58
+2026-01-14 19:07:47 [http-nio-8080-exec-1] DEBUG o.s.web.servlet.DispatcherServlet - Detected org.springframework.web.servlet.support.SessionFlashMapManager@1e8cfa27
+2026-01-14 19:07:47 [http-nio-8080-exec-1] DEBUG o.s.web.servlet.DispatcherServlet - enableLoggingRequestDetails='false': request parameters and headers will be masked to prevent unsafe logging of potentially sensitive data
+2026-01-14 19:07:47 [http-nio-8080-exec-1] INFO  o.s.web.servlet.DispatcherServlet - Completed initialization in 4 ms
+2026-01-14 19:07:47 [http-nio-8080-exec-1] ERROR c.m.security.jwt.AuthEntryPointJwt - Unauthorized error: Full authentication is required to access this resource
+2026-01-14 19:07:48 [http-nio-8080-exec-2] ERROR c.m.security.jwt.AuthEntryPointJwt - Unauthorized error: Full authentication is required to access this resource
+2026-01-14 19:08:10 [http-nio-8080-exec-3] ERROR c.m.security.jwt.AuthEntryPointJwt - Unauthorized error: Full authentication is required to access this resource
