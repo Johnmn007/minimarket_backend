@@ -12,50 +12,79 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Optional;
+
 @Configuration
 public class DataLoader {
-    
+
     private static final Logger logger = LoggerFactory.getLogger(DataLoader.class);
-    
+
     @Bean
-    CommandLineRunner initDatabase(RoleRepository roleRepository, 
-                                   UsuarioRepository usuarioRepository,
-                                   PasswordEncoder passwordEncoder) {
+    CommandLineRunner initDatabase(RoleRepository roleRepository,
+            UsuarioRepository usuarioRepository,
+            PasswordEncoder passwordEncoder) {
         return args -> {
+            logger.info("=== INICIANDO CARGA DE DATOS ===");
+            
             // Crear roles si no existen
-            if (roleRepository.count() == 0) {
-                logger.info("Creando roles iniciales...");
-                
-                Role adminRole = new Role(ERole.ADMIN);
-                Role cajeroRole = new Role(ERole.CAJERO);
-                Role almaceneroRole = new Role(ERole.ALMACENERO);
-                
-                roleRepository.save(adminRole);
-                roleRepository.save(cajeroRole);
-                roleRepository.save(almaceneroRole);
-                
-                logger.info("Roles creados: ADMIN, CAJERO, ALMACENERO");
+            try {
+                createRoleIfNotExists(roleRepository, ERole.ADMIN);
+                createRoleIfNotExists(roleRepository, ERole.VENDEDOR);
+                createRoleIfNotExists(roleRepository, ERole.ALMACENERO);
+                logger.info("✓ Roles verificados/creados: ADMIN, VENDEDOR, ALMACENERO");
+            } catch (Exception e) {
+                logger.error("Error al crear roles: {}", e.getMessage());
             }
-            
+
             // Crear usuario admin si no existe
-            if (usuarioRepository.findByUsername("admin").isEmpty()) {
-                logger.info("Creando usuario administrador...");
+            try {
+                Optional<Usuario> existingAdmin = usuarioRepository.findByUsername("admin");
                 
-                Usuario admin = new Usuario();
-                admin.setUsername("admin");
-                admin.setPassword(passwordEncoder.encode("admin123"));
-                admin.setActivo(true);
-                
-                Role adminRole = roleRepository.findByNombre(ERole.ADMIN)
-                    .orElseThrow(() -> new RuntimeException("Error: Rol ADMIN no encontrado"));
-                
-                admin.getRoles().add(adminRole);
-                
-                usuarioRepository.save(admin);
-                logger.info("Usuario admin creado - username: admin, password: admin123");
+                if (existingAdmin.isEmpty()) {
+                    logger.info("Creando usuario administrador...");
+
+                    String rawPassword = "admin123";
+                    String encodedPassword = passwordEncoder.encode(rawPassword);
+
+                    Usuario admin = new Usuario();
+                    admin.setUsername("admin");
+                    admin.setPassword(encodedPassword);
+                    admin.setActivo(true);
+
+                    Role adminRole = roleRepository.findByNombre(ERole.ADMIN)
+                            .orElseThrow(() -> new RuntimeException("Error: Rol ADMIN no encontrado"));
+
+                    admin.getRoles().add(adminRole);
+
+                    usuarioRepository.save(admin);
+                    
+                    logger.info("✓ Usuario admin creado exitosamente");
+                    logger.info("╔════════════════════════════════════════╗");
+                    logger.info("║  CREDENCIALES DE ACCESO               ║");
+                    logger.info("║  Username: admin                      ║");
+                    logger.info("║  Password: admin123                   ║");
+                    logger.info("╚════════════════════════════════════════╝");
+                } else {
+                    logger.info("✓ Usuario admin ya existe");
+                    logger.info("  Username: admin");
+                    logger.info("  Password: admin123");
+                }
+            } catch (Exception e) {
+                logger.error("Error al crear usuario admin: {}", e.getMessage(), e);
             }
-            
-            logger.info("Inicialización de datos completada");
+
+            logger.info("=== CARGA DE DATOS COMPLETADA ===\n");
         };
+    }
+    
+    private void createRoleIfNotExists(RoleRepository roleRepository, ERole roleEnum) {
+        Optional<Role> existingRole = roleRepository.findByNombre(roleEnum);
+        if (existingRole.isEmpty()) {
+            Role role = new Role(roleEnum);
+            roleRepository.save(role);
+            logger.debug("Rol creado: {}", roleEnum);
+        } else {
+            logger.debug("Rol ya existe: {}", roleEnum);
+        }
     }
 }
