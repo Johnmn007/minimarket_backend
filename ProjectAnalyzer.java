@@ -14,7 +14,7 @@ public class ProjectAnalyzer {
     // Carpetas y archivos a ignorar
     private static final Set<String> IGNORED_DIRS = Set.of(
         ".git", ".vscode", ".idea", "node_modules", "target",
-        "build", "dist", "out", "__pycache__", ".metadata"
+        "build", "dist", "out", "__pycache__", ".metadata", "logs"
     );
     
     private static final Set<String> IGNORED_FILES = Set.of(
@@ -26,7 +26,8 @@ public class ProjectAnalyzer {
     // Archivos específicos a incluir
     private static final Set<String> SPECIFIC_FILES = Set.of(
         "pom.xml", "build.gradle", "package.json", "README.md",
-        "Dockerfile", "docker-compose.yml", "Makefile"
+        "Dockerfile", "docker-compose.yml", "Makefile", "ProjectAnalyzer.java",
+        "ProjectAnalyzer.class", "TreePrinter.java", "TreePrinter.class"
     );
     
     public static void main(String[] args) {

@@ -1,11 +1,9 @@
 ================================================================================
 PROYECTO: minimarket_backend
 RUTA: C:\Users\Nvidia\Desktop\minimarket_backend
-FECHA: Wed Jan 14 18:17:16 PET 2026
+FECHA: Thu Jan 15 00:33:55 PET 2026
 ================================================================================
 
-
-[DIR] logs/
 
 [FILE] pom.xml
 ------------------------------------------------------------
@@ -109,6 +107,8 @@ FECHA: Wed Jan 14 18:17:16 PET 2026
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+   
     
     <build>
         <plugins>
@@ -127,174 +127,10 @@ FECHA: Wed Jan 14 18:17:16 PET 2026
         </plugins>
     </build>
 </project>
-------------------------------------------------------------
 
-[FILE] ProjectAnalyzer.java
-------------------------------------------------------------
-import java.io.*;
-import java.nio.file.*;
-import java.nio.file.attribute.BasicFileAttributes;
-import java.util.*;
 
-public class ProjectAnalyzer {
-    
-    // Extensiones de archivos a incluir
-    private static final Set<String> INCLUDED_EXTENSIONS = Set.of(
-        ".java", ".yml", ".yaml", ".properties", ".xml", 
-        ".sql", ".txt", ".md", ".json", ".html", ".css", ".js"
-    );
-    
-    // Carpetas y archivos a ignorar
-    private static final Set<String> IGNORED_DIRS = Set.of(
-        ".git", ".vscode", ".idea", "node_modules", "target",
-        "build", "dist", "out", "__pycache__", ".metadata"
-    );
-    
-    private static final Set<String> IGNORED_FILES = Set.of(
-        ".gitignore", ".env", ".env.local", ".env.production",
-        ".classpath", ".project", ".settings", "Thumbs.db",
-        "Desktop.ini", ".DS_Store", "compilado.txt"
-    );
-    
-    // Archivos específicos a incluir
-    private static final Set<String> SPECIFIC_FILES = Set.of(
-        "pom.xml", "build.gradle", "package.json", "README.md",
-        "Dockerfile", "docker-compose.yml", "Makefile"
-    );
-    
-    public static void main(String[] args) {
-        String currentDir = System.getProperty("user.dir");
-        System.out.println("ANALIZANDO DIRECTORIO: " + currentDir);
-        
-        try {
-            String output = analyzeProject(Paths.get(currentDir));
-            
-            // Guardar en archivo
-            Path outputFile = Paths.get(currentDir, "compilado.txt");
-            Files.writeString(outputFile, output, 
-                StandardOpenOption.CREATE, 
-                StandardOpenOption.TRUNCATE_EXISTING);
-            
-            System.out.println("ARCHIVO CREADO: " + outputFile.toAbsolutePath());
-            System.out.println("TOTAL LINEAS: " + output.lines().count());
-            
-        } catch (IOException e) {
-            System.err.println("ERROR: " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
-    
-    private static String analyzeProject(Path rootDir) throws IOException {
-        StringBuilder result = new StringBuilder();
-        
-        // Cabecera
-        result.append("=".repeat(80)).append("\n");
-        result.append("PROYECTO: ").append(rootDir.getFileName()).append("\n");
-        result.append("RUTA: ").append(rootDir.toAbsolutePath()).append("\n");
-        result.append("FECHA: ").append(new Date()).append("\n");
-        result.append("=".repeat(80)).append("\n\n");
-        
-        // Recorrer el árbol de directorios
-        Files.walkFileTree(rootDir, new SimpleFileVisitor<Path>() {
-            private int fileCount = 0;
-            private int dirCount = 0;
-            
-            @Override
-            public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
-                String dirName = dir.getFileName().toString();
-                
-                // Ignorar carpetas no deseadas
-                if (IGNORED_DIRS.contains(dirName) || dirName.startsWith(".")) {
-                    return FileVisitResult.SKIP_SUBTREE;
-                }
-                
-                // No incluir la carpeta raíz en el conteo
-                if (!dir.equals(rootDir)) {
-                    dirCount++;
-                    result.append("\n[DIR] ").append(getRelativePath(rootDir, dir)).append("/\n");
-                }
-                
-                return FileVisitResult.CONTINUE;
-            }
-            
-            @Override
-            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                String fileName = file.getFileName().toString();
-                
-                // Ignorar archivos no deseados
-                if (IGNORED_FILES.contains(fileName) || fileName.startsWith(".")) {
-                    return FileVisitResult.CONTINUE;
-                }
-                
-                // Verificar si el archivo debe ser incluido
-                if (shouldIncludeFile(file)) {
-                    fileCount++;
-                    result.append("\n[FILE] ").append(getRelativePath(rootDir, file)).append("\n");
-                    result.append("-".repeat(60)).append("\n");
-                    
-                    try {
-                        String content = Files.readString(file);
-                        result.append(content).append("\n");
-                    } catch (IOException e) {
-                        result.append("[ERROR: No se pudo leer el archivo - ").append(e.getMessage()).append("]\n");
-                    }
-                    
-                    result.append("-".repeat(60)).append("\n");
-                }
-                
-                return FileVisitResult.CONTINUE;
-            }
-            
-            @Override
-            public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
-                // Estadísticas al final
-                if (dir.equals(rootDir)) {
-                    result.append("\n").append("=".repeat(80)).append("\n");
-                    result.append("ESTADISTICAS:\n");
-                    result.append("  Carpetas analizadas: ").append(dirCount).append("\n");
-                    result.append("  Archivos incluidos: ").append(fileCount).append("\n");
-                    result.append("  Tamanio total: ").append(result.length()).append(" caracteres\n");
-                    result.append("=".repeat(80)).append("\n");
-                }
-                return FileVisitResult.CONTINUE;
-            }
-        });
-        
-        return result.toString();
-    }
-    
-    private static boolean shouldIncludeFile(Path file) {
-        String fileName = file.getFileName().toString();
-        
-        // Incluir archivos específicos
-        if (SPECIFIC_FILES.contains(fileName)) {
-            return true;
-        }
-        
-        // Verificar extensión
-        int dotIndex = fileName.lastIndexOf('.');
-        if (dotIndex > 0) {
-            String extension = fileName.substring(dotIndex).toLowerCase();
-            return INCLUDED_EXTENSIONS.contains(extension);
-        }
-        
-        return false;
-    }
-    
-    private static String getRelativePath(Path root, Path target) {
-        return root.relativize(target).toString().replace("\\", "/");
-    }
-}
-------------------------------------------------------------
 
-[FILE] readme.md
-------------------------------------------------------------
-mvn spring-boot:run
-
-http://localhost:8080/api/public/status
-
-http://localhost:8080/api/public/health
-------------------------------------------------------------
+----------
 
 [DIR] src/
 
@@ -307,46 +143,6 @@ http://localhost:8080/api/public/health
 [DIR] src/main/java/com/minimarket/
 
 [DIR] src/main/java/com/minimarket/config/
-
-[FILE] src/main/java/com/minimarket/config/CorsConfig.java
-------------------------------------------------------------
-package com.minimarket.config;
-
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-
-@Configuration
-public class CorsConfig {
-    
-    @Bean
-    public WebMvcConfigurer corsConfigurer() {
-        return new WebMvcConfigurer() {
-            @Override
-            public void addCorsMappings(CorsRegistry registry) {
-                // Configuración CORS para el frontend
-                registry.addMapping("/api/**")
-                        .allowedOrigins("http://localhost:5500", "http://127.0.0.1:5500", 
-                                       "http://localhost:8080", "http://localhost:3000")
-                        .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
-                        .allowedHeaders("*")
-                        .exposedHeaders("Authorization")
-                        .allowCredentials(true)
-                        .maxAge(3600);
-                
-                // También para rutas sin /api por si acaso
-                registry.addMapping("/**")
-                        .allowedOrigins("http://localhost:5500", "http://127.0.0.1:5500")
-                        .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                        .allowedHeaders("*")
-                        .allowCredentials(true)
-                        .maxAge(3600);
-            }
-        };
-    }
-}
-------------------------------------------------------------
 
 [FILE] src/main/java/com/minimarket/config/DataLoader.java
 ------------------------------------------------------------
@@ -364,6 +160,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Optional;
+
 @Configuration
 public class DataLoader {
 
@@ -377,52 +175,65 @@ public class DataLoader {
             logger.info("=== INICIANDO CARGA DE DATOS ===");
             
             // Crear roles si no existen
-            if (roleRepository.count() == 0) {
-                logger.info("Creando roles iniciales...");
-
-                Role adminRole = new Role(ERole.ADMIN);
-                Role vendedorRole = new Role(ERole.VENDEDOR);
-                Role almaceneroRole = new Role(ERole.ALMACENERO);
-
-                roleRepository.save(adminRole);
-                roleRepository.save(vendedorRole);
-                roleRepository.save(almaceneroRole);
-
-                logger.info("✓ Roles creados: ADMIN, VENDEDOR, ALMACENERO");
-            } else {
-                logger.info("✓ Roles ya existen en la base de datos");
+            try {
+                createRoleIfNotExists(roleRepository, ERole.ADMIN);
+                createRoleIfNotExists(roleRepository, ERole.VENDEDOR);
+                createRoleIfNotExists(roleRepository, ERole.ALMACENERO);
+                logger.info("✓ Roles verificados/creados: ADMIN, VENDEDOR, ALMACENERO");
+            } catch (Exception e) {
+                logger.error("Error al crear roles: {}", e.getMessage());
             }
 
             // Crear usuario admin si no existe
-            if (usuarioRepository.findByUsername("admin").isEmpty()) {
-                logger.info("Creando usuario administrador...");
-
-                String rawPassword = "admin123";
-                String encodedPassword = passwordEncoder.encode(rawPassword);
+            try {
+                Optional<Usuario> existingAdmin = usuarioRepository.findByUsername("admin");
                 
-                logger.debug("Password original: {}", rawPassword);
-                logger.debug("Password encriptado: {}", encodedPassword);
+                if (existingAdmin.isEmpty()) {
+                    logger.info("Creando usuario administrador...");
 
-                Usuario admin = new Usuario();
-                admin.setUsername("admin");
-                admin.setPassword(encodedPassword);
-                admin.setActivo(true);
+                    String rawPassword = "admin123";
+                    String encodedPassword = passwordEncoder.encode(rawPassword);
 
-                Role adminRole = roleRepository.findByNombre(ERole.ADMIN)
-                        .orElseThrow(() -> new RuntimeException("Error: Rol ADMIN no encontrado"));
+                    Usuario admin = new Usuario();
+                    admin.setUsername("admin");
+                    admin.setPassword(encodedPassword);
+                    admin.setActivo(true);
 
-                admin.getRoles().add(adminRole);
+                    Role adminRole = roleRepository.findByNombre(ERole.ADMIN)
+                            .orElseThrow(() -> new RuntimeException("Error: Rol ADMIN no encontrado"));
 
-                usuarioRepository.save(admin);
-                logger.info("✓ Usuario admin creado");
-                logger.info("  Username: admin");
-                logger.info("  Password: admin123");
-            } else {
-                logger.info("✓ Usuario admin ya existe");
+                    admin.getRoles().add(adminRole);
+
+                    usuarioRepository.save(admin);
+                    
+                    logger.info("✓ Usuario admin creado exitosamente");
+                    logger.info("╔════════════════════════════════════════╗");
+                    logger.info("║  CREDENCIALES DE ACCESO               ║");
+                    logger.info("║  Username: admin                      ║");
+                    logger.info("║  Password: admin123                   ║");
+                    logger.info("╚════════════════════════════════════════╝");
+                } else {
+                    logger.info("✓ Usuario admin ya existe");
+                    logger.info("  Username: admin");
+                    logger.info("  Password: admin123");
+                }
+            } catch (Exception e) {
+                logger.error("Error al crear usuario admin: {}", e.getMessage(), e);
             }
 
-            logger.info("=== CARGA DE DATOS COMPLETADA ===");
+            logger.info("=== CARGA DE DATOS COMPLETADA ===\n");
         };
+    }
+    
+    private void createRoleIfNotExists(RoleRepository roleRepository, ERole roleEnum) {
+        Optional<Role> existingRole = roleRepository.findByNombre(roleEnum);
+        if (existingRole.isEmpty()) {
+            Role role = new Role(roleEnum);
+            roleRepository.save(role);
+            logger.debug("Rol creado: {}", roleEnum);
+        } else {
+            logger.debug("Rol ya existe: {}", roleEnum);
+        }
     }
 }
 ------------------------------------------------------------
@@ -468,21 +279,31 @@ package com.minimarket.controller;
 import com.minimarket.dto.request.LoginRequest;
 import com.minimarket.dto.response.JwtResponse;
 import com.minimarket.security.jwt.JwtUtils;
+import com.minimarket.security.services.UserDetailsImpl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.validation.Valid;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/auth")
+@CrossOrigin(origins = "*", maxAge = 3600)
 public class AuthController {
+    
+    private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
     
     @Autowired
     private AuthenticationManager authenticationManager;
@@ -491,8 +312,10 @@ public class AuthController {
     private JwtUtils jwtUtils;
     
     @PostMapping("/signin")
-    public ResponseEntity<?> authenticateUser(@RequestBody LoginRequest loginRequest) {
+    public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
         try {
+            logger.info("Intento de login para usuario: {}", loginRequest.getUsername());
+            
             // Autenticar al usuario con Spring Security
             Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
@@ -507,33 +330,57 @@ public class AuthController {
             String jwt = jwtUtils.generateJwtToken(authentication);
             
             // Obtener detalles del usuario autenticado
-            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+            UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
             
             // Obtener roles
             List<String> roles = userDetails.getAuthorities().stream()
                 .map(item -> item.getAuthority())
                 .collect(Collectors.toList());
             
+            logger.info("Login exitoso para usuario: {} con roles: {}", userDetails.getUsername(), roles);
+            
             // Crear respuesta
             JwtResponse response = new JwtResponse(
                 jwt,
-                1L, // ID temporal - deberías obtenerlo de la base de datos
+                userDetails.getId(),
                 userDetails.getUsername(),
                 roles
             );
             
             return ResponseEntity.ok(response);
             
+        } catch (BadCredentialsException e) {
+            logger.error("Credenciales inválidas para usuario: {}", loginRequest.getUsername());
+            Map<String, String> error = new HashMap<>();
+            error.put("message", "Usuario o contraseña incorrectos");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
         } catch (Exception e) {
-            return ResponseEntity
-                .badRequest()
-                .body("Error de autenticación: " + e.getMessage());
+            logger.error("Error en autenticación: ", e);
+            Map<String, String> error = new HashMap<>();
+            error.put("message", "Error en el proceso de autenticación");
+            error.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
         }
     }
     
     @GetMapping("/test")
-    public String testAuth() {
-        return "Auth test endpoint works!";
+    public ResponseEntity<String> testAuth() {
+        return ResponseEntity.ok("Auth test endpoint works!");
+    }
+    
+    @GetMapping("/validate")
+    public ResponseEntity<Map<String, String>> validateToken() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        Map<String, String> response = new HashMap<>();
+        
+        if (authentication != null && authentication.isAuthenticated()) {
+            response.put("valid", "true");
+            response.put("username", authentication.getName());
+            return ResponseEntity.ok(response);
+        }
+        
+        response.put("valid", "false");
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
     }
 }
 ------------------------------------------------------------
@@ -545,8 +392,13 @@ package com.minimarket.controller;
 import com.minimarket.repository.RoleRepository;
 import com.minimarket.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -561,55 +413,69 @@ public class TestController {
     private RoleRepository roleRepository;
     
     @GetMapping("/public/status")
-    public String getStatus() {
-        return "✅ Minimarket Backend funcionando - " + System.currentTimeMillis();
+    public ResponseEntity<Map<String, Object>> getStatus() {
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "UP");
+        response.put("message", "Minimarket Backend funcionando correctamente");
+        response.put("timestamp", LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+        response.put("version", "1.0.0");
+        return ResponseEntity.ok(response);
     }
     
     @GetMapping("/public/health")
-    public Map<String, Object> healthCheck() {
+    public ResponseEntity<Map<String, Object>> healthCheck() {
         Map<String, Object> response = new HashMap<>();
         response.put("status", "UP");
         response.put("service", "minimarket-backend");
         response.put("timestamp", System.currentTimeMillis());
         response.put("version", "1.0.0");
-        return response;
+        response.put("environment", "development");
+        return ResponseEntity.ok(response);
     }
     
     @GetMapping("/test")
-    public String test() {
-        return "Test endpoint works!";
+    public ResponseEntity<String> test() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth != null ? auth.getName() : "anonymous";
+        return ResponseEntity.ok("Test endpoint works! User: " + username);
     }
     
     @GetMapping("/")
-    public String home() {
-        return "Minimarket API Backend - Running OK";
+    public ResponseEntity<Map<String, String>> home() {
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "Minimarket API Backend");
+        response.put("status", "Running OK");
+        response.put("version", "1.0.0");
+        return ResponseEntity.ok(response);
     }
     
     @PostMapping("/public/test-post")
-    public Map<String, String> testPost(@RequestBody Map<String, String> request) {
+    public ResponseEntity<Map<String, String>> testPost(@RequestBody Map<String, String> request) {
         Map<String, String> response = new HashMap<>();
         response.put("message", "POST recibido correctamente");
-        response.put("data", request.get("data"));
-        response.put("timestamp", String.valueOf(System.currentTimeMillis()));
-        return response;
+        response.put("receivedData", request.getOrDefault("data", "No data provided"));
+        response.put("timestamp", LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+        return ResponseEntity.ok(response);
     }
     
     @GetMapping("/public/db-check")
-    public Map<String, Object> dbCheck() {
+    public ResponseEntity<Map<String, Object>> dbCheck() {
         Map<String, Object> response = new HashMap<>();
         try {
             long userCount = usuarioRepository.count();
             long roleCount = roleRepository.count();
-            response.put("database", "OK");
+            response.put("database", "CONNECTED");
+            response.put("status", "OK");
             response.put("userCount", userCount);
             response.put("roleCount", roleCount);
-            response.put("timestamp", System.currentTimeMillis());
-            return response;
+            response.put("timestamp", LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             response.put("database", "ERROR");
+            response.put("status", "FAILED");
             response.put("error", e.getMessage());
-            response.put("timestamp", System.currentTimeMillis());
-            return response;
+            response.put("timestamp", LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+            return ResponseEntity.status(500).body(response);
         }
     }
 }
@@ -929,7 +795,7 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
 ------------------------------------------------------------
 package com.minimarket.security.jwt;
 
-import jakarta.servlet.ServletException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
@@ -939,6 +805,8 @@ import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 @Component
 public class AuthEntryPointJwt implements AuthenticationEntryPoint {
@@ -946,10 +814,24 @@ public class AuthEntryPointJwt implements AuthenticationEntryPoint {
     private static final Logger logger = LoggerFactory.getLogger(AuthEntryPointJwt.class);
 
     @Override
-    public void commence(HttpServletRequest request, HttpServletResponse response,
-            AuthenticationException authException) throws IOException, ServletException {
+    public void commence(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            AuthenticationException authException
+    ) throws IOException {
+
         logger.error("Unauthorized error: {}", authException.getMessage());
-        response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Error: Unauthorized");
+
+        response.setContentType("application/json");
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("status", 401);
+        body.put("error", "Unauthorized");
+        body.put("message", "Token inválido o no enviado");
+        body.put("path", request.getServletPath());
+
+        new ObjectMapper().writeValue(response.getOutputStream(), body);
     }
 }
 
@@ -964,12 +846,15 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
+import org.springframework.lang.NonNull;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -977,51 +862,52 @@ import java.io.IOException;
 
 @Component
 public class JwtAuthFilter extends OncePerRequestFilter {
-    
+
+    private static final Logger logger = LoggerFactory.getLogger(JwtAuthFilter.class);
+
     @Autowired
     private JwtUtils jwtUtils;
-    
+
     @Autowired
     private UserDetailsServiceImpl userDetailsService;
-    
+
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+    protected void doFilterInternal(@NonNull HttpServletRequest request,
+            @NonNull HttpServletResponse response,
+            @NonNull FilterChain filterChain)
             throws ServletException, IOException {
         try {
             String jwt = parseJwt(request);
-            
+
             if (jwt != null && jwtUtils.validateJwtToken(jwt)) {
                 String username = jwtUtils.getUserNameFromJwtToken(jwt);
-                
+
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-                
-                UsernamePasswordAuthenticationToken authentication = 
-                    new UsernamePasswordAuthenticationToken(
-                        userDetails, 
-                        null, 
-                        userDetails.getAuthorities()
-                    );
-                
+
+                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                        userDetails,
+                        null,
+                        userDetails.getAuthorities());
+
                 authentication.setDetails(
-                    new WebAuthenticationDetailsSource().buildDetails(request)
-                );
-                
+                        new WebAuthenticationDetailsSource().buildDetails(request));
+
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
         } catch (Exception e) {
             logger.error("No se puede autenticar al usuario: {}", e.getMessage());
         }
-        
+
         filterChain.doFilter(request, response);
     }
-    
+
     private String parseJwt(HttpServletRequest request) {
         String headerAuth = request.getHeader("Authorization");
-        
+
         if (StringUtils.hasText(headerAuth) && headerAuth.startsWith("Bearer ")) {
             return headerAuth.substring(7);
         }
-        
+
         return null;
     }
 }
@@ -1036,18 +922,23 @@ import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 
-import java.security.Key;
+import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
 @Component
 public class JwtUtils {
     private static final Logger logger = LoggerFactory.getLogger(JwtUtils.class);
 
-    private final String jwtSecret = "minimarketSecretKey1234567890minimarketSecretKey1234567890";
-    private final int jwtExpirationMs = 86400000; // 24 horas
+    @Value("${jwt.secret}")
+    private String jwtSecret;
+    
+    @Value("${jwt.expiration}")
+    private int jwtExpirationMs;
 
     public String generateJwtToken(Authentication authentication) {
         UserDetailsImpl userPrincipal = (UserDetailsImpl) authentication.getPrincipal();
@@ -1056,17 +947,18 @@ public class JwtUtils {
                 .setSubject(userPrincipal.getUsername())
                 .setIssuedAt(new Date())
                 .setExpiration(new Date((new Date()).getTime() + jwtExpirationMs))
-                .signWith(key(), SignatureAlgorithm.HS256)
+                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
 
-    private Key key() {
-        return Keys.hmacShaKeyFor(jwtSecret.getBytes());
+    private SecretKey getSigningKey() {
+        byte[] keyBytes = jwtSecret.getBytes(StandardCharsets.UTF_8);
+        return Keys.hmacShaKeyFor(keyBytes);
     }
 
     public String getUserNameFromJwtToken(String token) {
         return Jwts.parserBuilder()
-                .setSigningKey(key())
+                .setSigningKey(getSigningKey())
                 .build()
                 .parseClaimsJws(token)
                 .getBody()
@@ -1076,7 +968,7 @@ public class JwtUtils {
     public boolean validateJwtToken(String authToken) {
         try {
             Jwts.parserBuilder()
-                    .setSigningKey(key())
+                    .setSigningKey(getSigningKey())
                     .build()
                     .parseClaimsJws(authToken);
             return true;
@@ -1240,6 +1132,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -1248,30 +1141,36 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.Arrays;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 public class WebSecurityConfig {
-    
+
     @Autowired
     private UserDetailsService userDetailsService;
-    
+
     @Autowired
     private AuthEntryPointJwt unauthorizedHandler;
-    
+
     @Autowired
     private JwtAuthFilter jwtAuthFilter;
-    
+
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
         return authConfig.getAuthenticationManager();
     }
-    
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
-    
+
     @Bean
     public DaoAuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
@@ -1279,40 +1178,60 @@ public class WebSecurityConfig {
         authProvider.setPasswordEncoder(passwordEncoder());
         return authProvider;
     }
-    
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(Arrays.asList(
+                "http://localhost:5500",
+                "http://127.0.0.1:5500",
+                "http://localhost:8080",
+                "http://localhost:3000"));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+        configuration.setAllowedHeaders(Arrays.asList("*"));
+        configuration.setExposedHeaders(Arrays.asList("Authorization"));
+        configuration.setAllowCredentials(true);
+        configuration.setMaxAge(3600L);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
+    }
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            // Deshabilitar CSRF para APIs REST
-            .csrf(csrf -> csrf.disable())
-            
-            // Manejar excepciones de autenticación
-            .exceptionHandling(exception -> exception
-                .authenticationEntryPoint(unauthorizedHandler)
-            )
-            
-            // Configurar política de sesiones (sin estado para APIs REST)
-            .sessionManagement(session -> session
-                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-            )
-            
-            // Configurar autorizaciones
-            .authorizeHttpRequests(auth -> auth
-                // Endpoints públicos
-                .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers("/api/public/**").permitAll()
-                .requestMatchers("/error").permitAll()
-                
-                // Endpoints que requieren autenticación
-                .anyRequest().authenticated()
-            );
-        
+                // Habilitar CORS
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+
+                // Deshabilitar CSRF para APIs REST
+                .csrf(csrf -> csrf.disable())
+
+                // Manejar excepciones de autenticación
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint(unauthorizedHandler))
+
+                // Configurar política de sesiones (sin estado para APIs REST)
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+
+                // Configurar autorizaciones
+                .authorizeHttpRequests(auth -> auth
+                        // Endpoints públicos
+                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/public/**").permitAll()
+                        .requestMatchers("/error").permitAll()
+                        .requestMatchers("/").permitAll()
+
+                        // Endpoints que requieren autenticación
+                        .anyRequest().authenticated());
+
         // Configurar el proveedor de autenticación
         http.authenticationProvider(authenticationProvider());
-        
+
         // Agregar el filtro JWT antes del filtro de autenticación de usuario/contraseña
         http.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
-        
+
         return http.build();
     }
 }
@@ -1331,15 +1250,23 @@ spring:
     username: postgres
     password: john.007
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
 
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: true  # Cambiar a true para debugging
+    show-sql: false
     properties:
       hibernate:
         format_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
     open-in-view: false
 
 server:
@@ -1349,22 +1276,29 @@ server:
   error:
     include-message: always
     include-binding-errors: always
-
-# LOGGING MEJORADO PARA DEBUGGING
-logging:
-  level:
-    root: INFO
-    com.minimarket: DEBUG
-    org.springframework.security: DEBUG
-    org.hibernate.SQL: DEBUG
-    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
-  pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    include-stacktrace: on_param
 
 # JWT CONFIGURATION
 jwt:
   secret: minimarketSecretKey1234567890minimarketSecretKey1234567890
   expiration: 86400000  # 24 horas en milisegundos
+
+# LOGGING CONFIGURATION
+logging:
+  level:
+    root: INFO
+    com.minimarket: DEBUG
+    org.springframework.security: INFO
+    org.springframework.web: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/minimarket-backend.log
+    max-size: 10MB
+    max-history: 30
 ------------------------------------------------------------
 
 [DIR] src/test/
@@ -1372,6 +1306,11 @@ jwt:
 [DIR] src/test/java/
 
 [DIR] tools/
+
+[FILE] TreePrinter.class
+------------------------------------------------------------
+[ERROR: No se pudo leer el archivo - Input length = 1]
+------------------------------------------------------------
 
 [FILE] TreePrinter.java
 ------------------------------------------------------------
@@ -1486,7 +1425,7 @@ public class TreePrinter {
 
 ================================================================================
 ESTADISTICAS:
-  Carpetas analizadas: 20
-  Archivos incluidos: 24
-  Tamanio total: 50435 caracteres
+  Carpetas analizadas: 19
+  Archivos incluidos: 25
+  Tamanio total: 61820 caracteres
 ================================================================================
