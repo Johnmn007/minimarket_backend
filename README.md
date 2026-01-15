@@ -20,7 +20,7 @@ Sistema de gestión para minimarket desarrollado con Spring Boot 3.2.4 y Postgre
 - Java 17 o superior
 - Maven 3.6+
 - PostgreSQL 12 o superior
-- IDE (IntelliJ IDEA, Eclipse, VS Code con extensión Java)
+- IDE (vscode, antigravity)
 
 ## 🚀 Configuración Inicial
 
