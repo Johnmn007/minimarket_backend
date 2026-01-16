@@ -25,7 +25,7 @@ import java.util.Arrays;
 
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity
+@EnableMethodSecurity(prePostEnabled = true)
 public class WebSecurityConfig {
 
     @Autowired
@@ -38,7 +38,85 @@ public class WebSecurityConfig {
     private JwtAuthFilter jwtAuthFilter;
 
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http
+                // Habilitar CORS
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+
+                // Deshabilitar CSRF (APIs REST stateless)
+                .csrf(csrf -> csrf.disable())
+
+                // Manejar excepciones de autenticación
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint(unauthorizedHandler))
+
+                // Sin estado (stateless)
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+
+                // Configurar autorizaciones
+                .authorizeHttpRequests(auth -> auth
+                        // Endpoints públicos
+                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/public/**").permitAll()
+                        .requestMatchers("/error").permitAll()
+
+                        // Endpoints protegidos
+                        .requestMatchers("/api/admin/**").hasAuthority("ADMIN")
+                        .requestMatchers("/api/vendedor/**").hasAnyAuthority("ADMIN", "VENDEDOR")
+                        .requestMatchers("/api/almacen/**").hasAnyAuthority("ADMIN", "ALMACENERO")
+
+                        // Cualquier otro requiere autenticación
+                        .anyRequest().authenticated())
+
+                // Proveedor de autenticación
+                .authenticationProvider(authenticationProvider())
+
+                // Filtro JWT
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+
+        return http.build();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        
+        // Orígenes permitidos
+        configuration.setAllowedOrigins(Arrays.asList(
+                "http://localhost:5500",
+                "http://127.0.0.1:5500",
+                "http://localhost:8080",
+                "http://localhost:3000",
+                "http://localhost:4200", // Angular
+                "http://localhost:5173" // Angular
+        ));
+        
+        // Métodos HTTP permitidos
+        configuration.setAllowedMethods(Arrays.asList(
+                "GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"
+        ));
+        
+        // Headers permitidos
+        configuration.setAllowedHeaders(Arrays.asList("*"));
+        
+        // Headers expuestos al cliente
+        configuration.setExposedHeaders(Arrays.asList("Authorization"));
+        
+        // Permitir credenciales
+        configuration.setAllowCredentials(true);
+        
+        // Tiempo de cache para preflight
+        configuration.setMaxAge(3600L);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
+    }
+
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) 
+            throws Exception {
         return authConfig.getAuthenticationManager();
     }
 
@@ -53,61 +131,5 @@ public class WebSecurityConfig {
         authProvider.setUserDetailsService(userDetailsService);
         authProvider.setPasswordEncoder(passwordEncoder());
         return authProvider;
-    }
-
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList(
-                "http://localhost:5500",
-                "http://127.0.0.1:5500",
-                "http://localhost:8080",
-                "http://localhost:3000"));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
-        configuration.setAllowedHeaders(Arrays.asList("*"));
-        configuration.setExposedHeaders(Arrays.asList("Authorization"));
-        configuration.setAllowCredentials(true);
-        configuration.setMaxAge(3600L);
-
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
-    }
-
-    @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http
-                // Habilitar CORS
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-
-                // Deshabilitar CSRF para APIs REST
-                .csrf(csrf -> csrf.disable())
-
-                // Manejar excepciones de autenticación
-                .exceptionHandling(exception -> exception
-                        .authenticationEntryPoint(unauthorizedHandler))
-
-                // Configurar política de sesiones (sin estado para APIs REST)
-                .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-
-                // Configurar autorizaciones
-                .authorizeHttpRequests(auth -> auth
-                        // Endpoints públicos
-                        .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/api/public/**").permitAll()
-                        .requestMatchers("/error").permitAll()
-                        .requestMatchers("/").permitAll()
-
-                        // Endpoints que requieren autenticación
-                        .anyRequest().authenticated());
-
-        // Configurar el proveedor de autenticación
-        http.authenticationProvider(authenticationProvider());
-
-        // Agregar el filtro JWT antes del filtro de autenticación de usuario/contraseña
-        http.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
-
-        return http.build();
     }
 }
