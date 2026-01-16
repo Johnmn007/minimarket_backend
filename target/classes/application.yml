@@ -11,6 +11,8 @@ spring:
       maximum-pool-size: 10
       minimum-idle: 5
       connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
 
   jpa:
     hibernate:
@@ -28,8 +30,9 @@ spring:
 
 server:
   port: 8080
-  servlet:
-    context-path: /api
+  # ❌ ELIMINAR esta línea para que /api no se duplique
+  # servlet:
+  #   context-path: /api
   error:
     include-message: always
     include-binding-errors: always
@@ -37,21 +40,21 @@ server:
 
 # JWT CONFIGURATION
 jwt:
-  secret: minimarketSecretKey1234567890minimarketSecretKey1234567890
-  expiration: 86400000  # 24 horas en milisegundos
+  # ⚠️ CAMBIAR en producción por una clave más segura
+  secret: ${JWT_SECRET:minimarketSecretKey1234567890minimarketSecretKey1234567890}
+  expiration: 86400000  # 24 horas
 
-# LOGGING CONFIGURATION
+# LOGGING
 logging:
   level:
     root: INFO
     com.minimarket: DEBUG
     org.springframework.security: INFO
-    org.springframework.web: DEBUG
+    org.springframework.web: INFO
     org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
   pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
-    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
   file:
     name: logs/minimarket-backend.log
     max-size: 10MB
