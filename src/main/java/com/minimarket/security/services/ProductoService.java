@@ -2,6 +2,7 @@ package com.minimarket.security.services;
 
 import com.minimarket.model.Producto;
 import com.minimarket.repository.ProductoRepository;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -19,7 +20,7 @@ public class ProductoService {
         return repository.findAll();
     }
 
-    public Producto guardarProducto(Producto producto) {
+    public @NonNull Producto guardarProducto(@NonNull Producto producto) {
         return repository.save(producto);
     }
 }
