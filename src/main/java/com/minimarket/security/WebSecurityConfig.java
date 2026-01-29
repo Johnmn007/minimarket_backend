@@ -40,39 +40,41 @@ public class WebSecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                // Habilitar CORS
+                // CORS
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
-                // Deshabilitar CSRF (APIs REST stateless)
+                // CSRF off (API REST)
                 .csrf(csrf -> csrf.disable())
 
-                // Manejar excepciones de autenticación
+                // Manejo de errores de autenticación
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint(unauthorizedHandler))
 
-                // Sin estado (stateless)
+                // Stateless
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-                // Configurar autorizaciones
+                // Autorización
                 .authorizeHttpRequests(auth -> auth
-                        // Endpoints públicos
+                        // Públicos
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/public/**").permitAll()
+                        .requestMatchers("/api/productos/**").permitAll()
                         .requestMatchers("/error").permitAll()
 
-                        // Endpoints protegidos
+                        // Protegidos por rol
                         .requestMatchers("/api/admin/**").hasAuthority("ADMIN")
                         .requestMatchers("/api/vendedor/**").hasAnyAuthority("ADMIN", "VENDEDOR")
                         .requestMatchers("/api/almacen/**").hasAnyAuthority("ADMIN", "ALMACENERO")
 
-                        // Cualquier otro requiere autenticación
-                        .anyRequest().authenticated())
+                        // Todo lo demás requiere login
+                        .anyRequest().authenticated()
+                )
 
-                // Proveedor de autenticación
+                // Provider
                 .authenticationProvider(authenticationProvider())
 
-                // Filtro JWT
+                // JWT Filter
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
@@ -81,32 +83,23 @@ public class WebSecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        
-        // Orígenes permitidos
+
         configuration.setAllowedOrigins(Arrays.asList(
                 "http://localhost:5500",
                 "http://127.0.0.1:5500",
                 "http://localhost:8080",
                 "http://localhost:3000",
-                "http://localhost:4200", // Angular
-                "http://localhost:5173" // Angular
+                "http://localhost:4200",
+                "http://localhost:5173"
         ));
-        
-        // Métodos HTTP permitidos
+
         configuration.setAllowedMethods(Arrays.asList(
                 "GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"
         ));
-        
-        // Headers permitidos
+
         configuration.setAllowedHeaders(Arrays.asList("*"));
-        
-        // Headers expuestos al cliente
         configuration.setExposedHeaders(Arrays.asList("Authorization"));
-        
-        // Permitir credenciales
         configuration.setAllowCredentials(true);
-        
-        // Tiempo de cache para preflight
         configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
@@ -115,8 +108,8 @@ public class WebSecurityConfig {
     }
 
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) 
-            throws Exception {
+    public AuthenticationManager authenticationManager(
+            AuthenticationConfiguration authConfig) throws Exception {
         return authConfig.getAuthenticationManager();
     }
 
