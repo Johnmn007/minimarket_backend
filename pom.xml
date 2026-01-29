@@ -72,10 +72,16 @@
         </dependency>
         
         <!-- Lombok para reducir código boilerplate -->
-        <dependency>
+        <!-- <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <optional>true</optional>
+        </dependency> -->
+        <dependency>
+    <groupId>org.projectlombok</groupId>
+    <artifactId>lombok</artifactId>
+    <version>1.18.30</version>
+    <scope>provided</scope>
         </dependency>
         
         <!-- Desarrollo -->
@@ -98,6 +104,9 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    
+
 
    
     
