@@ -6,6 +6,7 @@ import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Objects;
 
 @Service
 public class ProductoService {
@@ -21,6 +22,6 @@ public class ProductoService {
     }
 
     public @NonNull Producto guardarProducto(@NonNull Producto producto) {
-        return repository.save(producto);
+        return Objects.requireNonNull(repository.save(producto), "El producto guardado no puede ser nulo");
     }
 }
