@@ -1,14 +1,15 @@
 package com.minimarket.controller;
 
-import com.minimarket.model.Producto;
-import com.minimarket.security.services.ProductoService;
+import com.minimarket.entity.Producto;
+import com.minimarket.service.ProductoService;
+
 import org.springframework.lang.NonNull;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Objects;
 
 @RestController
+
 @RequestMapping("/api/productos")
 @CrossOrigin(origins = "http://localhost:5173")
 public class ProductoController {
@@ -28,7 +29,6 @@ public class ProductoController {
     // POST → crear producto ✅
     @PostMapping
     public @NonNull Producto crearProducto(@RequestBody Producto producto) {
-        return Objects.requireNonNull(service.guardarProducto(producto),
-                "El producto creado no puede ser nulo");
+        return service.guardarProducto(producto);
     }
 }

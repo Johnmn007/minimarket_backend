@@ -1,7 +1,7 @@
 ================================================================================
 PROYECTO: minimarket_backend
 RUTA: C:\Users\Nvidia\Desktop\minimarket_backend
-FECHA: Wed Jan 28 09:02:15 GMT-05:00 2026
+FECHA: Sun Feb 15 08:34:51 GMT-05:00 2026
 ================================================================================
 
 
@@ -81,10 +81,16 @@ FECHA: Wed Jan 28 09:02:15 GMT-05:00 2026
         </dependency>
         
         <!-- Lombok para reducir código boilerplate -->
-        <dependency>
+        <!-- <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <optional>true</optional>
+        </dependency> -->
+        <dependency>
+    <groupId>org.projectlombok</groupId>
+    <artifactId>lombok</artifactId>
+    <version>1.18.30</version>
+    <scope>provided</scope>
         </dependency>
         
         <!-- Desarrollo -->
@@ -107,6 +113,9 @@ FECHA: Wed Jan 28 09:02:15 GMT-05:00 2026
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    
+
 
    
     
@@ -131,6 +140,7 @@ FECHA: Wed Jan 28 09:02:15 GMT-05:00 2026
 
 
 ------------------------------------------------------------
+
 
 ------------------------------------------------------------
 
@@ -279,7 +289,13 @@ public class DebugFilter implements Filter {
 package com.minimarket.controller;
 
 import com.minimarket.dto.request.LoginRequest;
+import com.minimarket.dto.request.SignupRequest;
 import com.minimarket.dto.response.JwtResponse;
+import com.minimarket.entity.ERole;
+import com.minimarket.entity.Role;
+import com.minimarket.entity.Usuario;
+import com.minimarket.repository.RoleRepository;
+import com.minimarket.repository.UsuarioRepository;
 import com.minimarket.security.jwt.JwtUtils;
 import com.minimarket.security.services.UserDetailsImpl;
 import org.slf4j.Logger;
@@ -292,65 +308,69 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/auth")
 @CrossOrigin(origins = "*", maxAge = 3600)
 public class AuthController {
-    
+
     private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
-    
+
     @Autowired
     private AuthenticationManager authenticationManager;
-    
+
     @Autowired
     private JwtUtils jwtUtils;
-    
+
+    @Autowired
+    private UsuarioRepository usuarioRepository;
+
+    @Autowired
+    private RoleRepository roleRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    // ==================== SIGNIN ====================
     @PostMapping("/signin")
     public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
         try {
             logger.info("Intento de login para usuario: {}", loginRequest.getUsername());
-            
-            // Autenticar al usuario con Spring Security
+
             Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                    loginRequest.getUsername(), 
-                    loginRequest.getPassword()
-                )
+                    new UsernamePasswordAuthenticationToken(
+                            loginRequest.getUsername(),
+                            loginRequest.getPassword()
+                    )
             );
-            
+
             SecurityContextHolder.getContext().setAuthentication(authentication);
-            
-            // Generar token JWT
+
             String jwt = jwtUtils.generateJwtToken(authentication);
-            
-            // Obtener detalles del usuario autenticado
+
             UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-            
-            // Obtener roles
+
             List<String> roles = userDetails.getAuthorities().stream()
-                .map(item -> item.getAuthority())
-                .collect(Collectors.toList());
-            
+                    .map(item -> item.getAuthority())
+                    .collect(Collectors.toList());
+
             logger.info("Login exitoso para usuario: {} con roles: {}", userDetails.getUsername(), roles);
-            
-            // Crear respuesta
+
             JwtResponse response = new JwtResponse(
-                jwt,
-                userDetails.getId(),
-                userDetails.getUsername(),
-                roles
+                    jwt,
+                    userDetails.getId(),
+                    userDetails.getUsername(),
+                    roles
             );
-            
+
             return ResponseEntity.ok(response);
-            
+
         } catch (BadCredentialsException e) {
             logger.error("Credenciales inválidas para usuario: {}", loginRequest.getUsername());
             Map<String, String> error = new HashMap<>();
@@ -364,27 +384,116 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
         }
     }
-    
+
+    // ==================== SIGNUP ====================
+    @PostMapping("/signup")
+    public ResponseEntity<?> registerUser(@Valid @RequestBody SignupRequest signUpRequest) {
+        if (usuarioRepository.existsByUsername(signUpRequest.getUsername())) {
+            return ResponseEntity
+                    .badRequest()
+                    .body(Map.of("message", "Error: El username ya existe"));
+        }
+
+        // Crear usuario
+        Usuario user = new Usuario(signUpRequest.getUsername(),
+                passwordEncoder.encode(signUpRequest.getPassword()));
+
+        Set<String> strRoles = signUpRequest.getRoles();
+        Set<Role> roles = new HashSet<>();
+
+        if (strRoles == null || strRoles.isEmpty()) {
+            // Rol por defecto ALMACENERO
+            Role defaultRole = roleRepository.findByNombre(ERole.ALMACENERO)
+                    .orElseThrow(() -> new RuntimeException("Error: Rol ALMACENERO no encontrado"));
+            roles.add(defaultRole);
+        } else {
+            strRoles.forEach(roleStr -> {
+                switch (roleStr.toUpperCase()) {
+                    case "ADMIN":
+                        roles.add(roleRepository.findByNombre(ERole.ADMIN)
+                                .orElseThrow(() -> new RuntimeException("Error: Rol ADMIN no encontrado")));
+                        break;
+                    case "VENDEDOR":
+                        roles.add(roleRepository.findByNombre(ERole.VENDEDOR)
+                                .orElseThrow(() -> new RuntimeException("Error: Rol VENDEDOR no encontrado")));
+                        break;
+                    case "ALMACENERO":
+                    default:
+                        roles.add(roleRepository.findByNombre(ERole.ALMACENERO)
+                                .orElseThrow(() -> new RuntimeException("Error: Rol ALMACENERO no encontrado")));
+                }
+            });
+        }
+
+        user.setRoles(roles);
+        usuarioRepository.save(user);
+
+        logger.info("Usuario registrado correctamente: {}", user.getUsername());
+
+        return ResponseEntity.ok(Map.of("message", "Usuario registrado correctamente"));
+    }
+
+    // ==================== TEST ENDPOINTS ====================
     @GetMapping("/test")
     public ResponseEntity<String> testAuth() {
         return ResponseEntity.ok("Auth test endpoint works!");
     }
-    
+
     @GetMapping("/validate")
     public ResponseEntity<Map<String, String>> validateToken() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         Map<String, String> response = new HashMap<>();
-        
+
         if (authentication != null && authentication.isAuthenticated()) {
             response.put("valid", "true");
             response.put("username", authentication.getName());
             return ResponseEntity.ok(response);
         }
-        
+
         response.put("valid", "false");
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
     }
 }
+
+------------------------------------------------------------
+
+[FILE] src/main/java/com/minimarket/controller/ProductoController.java
+------------------------------------------------------------
+package com.minimarket.controller;
+
+import com.minimarket.entity.Producto;
+import com.minimarket.service.ProductoService;
+
+import org.springframework.lang.NonNull;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+
+@RequestMapping("/api/productos")
+@CrossOrigin(origins = "http://localhost:5173")
+public class ProductoController {
+
+    private final ProductoService service;
+
+    public ProductoController(ProductoService service) {
+        this.service = service;
+    }
+
+    // GET → listar productos
+    @GetMapping
+    public List<Producto> listarProductos() {
+        return service.listarProductos();
+    }
+
+    // POST → crear producto ✅
+    @PostMapping
+    public @NonNull Producto crearProducto(@RequestBody Producto producto) {
+        return service.guardarProducto(producto);
+    }
+}
+
 ------------------------------------------------------------
 
 [FILE] src/main/java/com/minimarket/controller/TestController.java
@@ -483,6 +592,129 @@ public class TestController {
 }
 ------------------------------------------------------------
 
+[FILE] src/main/java/com/minimarket/controller/TestPagoController.java
+------------------------------------------------------------
+package com.minimarket.controller;
+
+import com.minimarket.entity.*;
+import com.minimarket.repository.*;
+import org.springframework.lang.NonNull;
+import org.springframework.web.bind.annotation.*;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/test/pagos")
+public class TestPagoController {
+
+    private final MetodoPagoRepository metodoPagoRepo;
+    private final VentaRepository ventaRepo;
+    private final PagoRepository pagoRepo;
+
+    public TestPagoController(
+            MetodoPagoRepository metodoPagoRepo,
+            VentaRepository ventaRepo,
+            PagoRepository pagoRepo) {
+        this.metodoPagoRepo = metodoPagoRepo;
+        this.ventaRepo = ventaRepo;
+        this.pagoRepo = pagoRepo;
+    }
+
+    // 1️⃣ Listar métodos de pago
+    @GetMapping("/metodos")
+    public List<MetodoPago> listarMetodos() {
+        return metodoPagoRepo.findAll();
+    }
+
+    // 2️⃣ Crear venta simple (sin detalles)
+    @PostMapping("/venta")
+    public Venta crearVenta(@RequestParam @NonNull Long vendedorId) {
+        Venta venta = new Venta();
+        venta.setTotal(new BigDecimal("10.00"));
+        venta.setEstado("PENDIENTE_PAGO");
+        venta.setFecha(LocalDateTime.now());
+
+        Usuario vendedor = new Usuario();
+        vendedor.setId(vendedorId);
+        venta.setVendedor(vendedor);
+
+        return ventaRepo.save(venta);
+    }
+
+    // 3️⃣ Registrar pago
+    @PostMapping("/pago")
+    public Pago registrarPago(
+            @RequestParam @NonNull Long ventaId,
+            @RequestParam @NonNull Long metodoPagoId) {
+        Venta venta = ventaRepo.findById(ventaId)
+                .orElseThrow(() -> new RuntimeException("Venta no encontrada con ID: " + ventaId));
+
+        MetodoPago metodo = metodoPagoRepo.findById(metodoPagoId)
+                .orElseThrow(() -> new RuntimeException("Método de pago no encontrado con ID: " + metodoPagoId));
+
+        Pago pago = new Pago();
+        pago.setVenta(venta);
+        pago.setMetodoPago(metodo);
+        pago.setMonto(venta.getTotal());
+        pago.setEstado("CONFIRMADO");
+        pago.setFecha(LocalDateTime.now());
+
+        venta.setEstado("PAGADO");
+
+        ventaRepo.save(venta);
+        return pagoRepo.save(pago);
+    }
+}
+
+------------------------------------------------------------
+
+[FILE] src/main/java/com/minimarket/controller/VentaController.java
+------------------------------------------------------------
+package com.minimarket.controller;
+
+import com.minimarket.dto.venta.FinalizarVentaRequest;
+import com.minimarket.dto.venta.FinalizarVentaResponse;
+import com.minimarket.entity.Usuario;
+import com.minimarket.repository.UsuarioRepository;
+import com.minimarket.service.VentaService;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/api/ventas")
+@CrossOrigin(origins = "http://localhost:5173")
+public class VentaController {
+
+    @Autowired
+    private VentaService ventaService;
+
+    @Autowired
+    private UsuarioRepository usuarioRepository;
+
+    @PostMapping("/finalizar")
+    public ResponseEntity<FinalizarVentaResponse> finalizarVenta(
+            @Valid @RequestBody FinalizarVentaRequest request) {
+        
+        // Obtener el usuario autenticado desde el token
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username = authentication.getName();
+        
+        Usuario vendedor = usuarioRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("Vendedor no encontrado: " + username));
+        
+        FinalizarVentaResponse response = ventaService.finalizarVenta(request, vendedor);
+        
+        return ResponseEntity.ok(response);
+    }
+}
+------------------------------------------------------------
+
 [DIR] src/main/java/com/minimarket/dto/
 
 [DIR] src/main/java/com/minimarket/dto/request/
@@ -515,6 +747,37 @@ public class LoginRequest {
     public void setPassword(String password) {
         this.password = password;
     }
+}
+
+------------------------------------------------------------
+
+[FILE] src/main/java/com/minimarket/dto/request/SignupRequest.java
+------------------------------------------------------------
+package com.minimarket.dto.request;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import java.util.Set;
+
+public class SignupRequest {
+    @NotBlank
+    @Size(min = 3, max = 20)
+    private String username;
+
+    @NotBlank
+    @Size(min = 6, max = 120)
+    private String password;
+
+    private Set<String> roles; // ["ADMIN", "VENDEDOR", "ALMACENERO"]
+
+    public String getUsername() { return username; }
+    public void setUsername(String username) { this.username = username; }
+
+    public String getPassword() { return password; }
+    public void setPassword(String password) { this.password = password; }
+
+    public Set<String> getRoles() { return roles; }
+    public void setRoles(Set<String> roles) { this.roles = roles; }
 }
 
 ------------------------------------------------------------
@@ -580,7 +843,210 @@ public class JwtResponse {
 
 ------------------------------------------------------------
 
+[DIR] src/main/java/com/minimarket/dto/venta/
+
+[FILE] src/main/java/com/minimarket/dto/venta/FinalizarVentaRequest.java
+------------------------------------------------------------
+package com.minimarket.dto.venta;
+
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
+import java.util.List;
+
+public class FinalizarVentaRequest {
+
+    @NotEmpty
+    private List<ItemVentaRequest> items;
+
+    @NotNull
+    private Long metodoPagoId;
+
+    private String referencia;
+
+    public List<ItemVentaRequest> getItems() {
+        return items;
+    }
+
+    public Long getMetodoPagoId() {
+        return metodoPagoId;
+    }
+
+    public String getReferencia() {
+        return referencia;
+    }
+
+    public void setItems(List<ItemVentaRequest> items) {
+        this.items = items;
+    }
+
+    public void setMetodoPagoId(Long metodoPagoId) {
+        this.metodoPagoId = metodoPagoId;
+    }
+
+    public void setReferencia(String referencia) {
+        this.referencia = referencia;
+    }
+}
+
+------------------------------------------------------------
+
+[FILE] src/main/java/com/minimarket/dto/venta/FinalizarVentaResponse.java
+------------------------------------------------------------
+package com.minimarket.dto.venta;
+
+import java.math.BigDecimal;
+
+public class FinalizarVentaResponse {
+
+    private Long ventaId;
+    private String estado;
+    private BigDecimal total;
+    private String metodoPago;
+
+    public Long getVentaId() {
+        return ventaId;
+    }
+
+    public String getEstado() {
+        return estado;
+    }
+
+    public BigDecimal getTotal() {
+        return total;
+    }
+
+    public String getMetodoPago() {
+        return metodoPago;
+    }
+
+    public void setVentaId(Long ventaId) {
+        this.ventaId = ventaId;
+    }
+
+    public void setEstado(String estado) {
+        this.estado = estado;
+    }
+
+    public void setTotal(BigDecimal total) {
+        this.total = total;
+    }
+
+    public void setMetodoPago(String metodoPago) {
+        this.metodoPago = metodoPago;
+    }
+}
+
+------------------------------------------------------------
+
+[FILE] src/main/java/com/minimarket/dto/venta/ItemVentaRequest.java
+------------------------------------------------------------
+package com.minimarket.dto.venta;
+
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
+
+public class ItemVentaRequest {
+
+    @NotNull
+    private Long productoId;
+
+    @NotNull
+    @Min(1)
+    private Integer cantidad;
+
+    public Long getProductoId() {
+        return productoId;
+    }
+
+    public Integer getCantidad() {
+        return cantidad;
+    }
+
+    public void setProductoId(Long productoId) {
+        this.productoId = productoId;
+    }
+
+    public void setCantidad(Integer cantidad) {
+        this.cantidad = cantidad;
+    }
+}
+
+------------------------------------------------------------
+
 [DIR] src/main/java/com/minimarket/entity/
+
+[FILE] src/main/java/com/minimarket/entity/DetalleVenta.java
+------------------------------------------------------------
+package com.minimarket.entity;
+
+import jakarta.persistence.*;
+import java.math.BigDecimal;
+
+@Entity
+@Table(name = "detalle_venta")
+public class DetalleVenta {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne
+    @JoinColumn(name = "venta_id", nullable = false)
+    private Venta venta;
+
+    @ManyToOne
+    @JoinColumn(name = "producto_id", nullable = false)
+    private Producto producto;
+
+    @Column(nullable = false)
+    private Integer cantidad;
+
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal precioUnitario;
+
+    // getters y setters
+    public Long getId() {
+        return id;
+    }
+
+    public Venta getVenta() {
+        return venta;
+    }
+
+    public Producto getProducto() {
+        return producto;
+    }
+
+    public Integer getCantidad() {
+        return cantidad;
+    }
+
+    public BigDecimal getPrecioUnitario() {
+        return precioUnitario;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public void setVenta(Venta venta) {
+        this.venta = venta;
+    }
+
+    public void setProducto(Producto producto) {
+        this.producto = producto;
+    }
+
+    public void setCantidad(Integer cantidad) {
+        this.cantidad = cantidad;
+    }
+
+    public void setPrecioUnitario(BigDecimal precioUnitario) {
+        this.precioUnitario = precioUnitario;
+    }
+}
+
+------------------------------------------------------------
 
 [FILE] src/main/java/com/minimarket/entity/ERole.java
 ------------------------------------------------------------
@@ -591,6 +1057,209 @@ public enum ERole {
     VENDEDOR,
     ALMACENERO
 }
+------------------------------------------------------------
+
+[FILE] src/main/java/com/minimarket/entity/MetodoPago.java
+------------------------------------------------------------
+package com.minimarket.entity;
+
+import jakarta.persistence.*;
+
+@Entity
+@Table(name = "metodo_pago")
+public class MetodoPago {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false, unique = true, length = 20)
+    private String nombre;
+
+    @Column(nullable = false)
+    private Boolean activo = true;
+
+    // getters y setters
+    public Long getId() {
+        return id;
+    }
+
+    public String getNombre() {
+        return nombre;
+    }
+
+    public Boolean getActivo() {
+        return activo;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public void setNombre(String nombre) {
+        this.nombre = nombre;
+    }
+
+    public void setActivo(Boolean activo) {
+        this.activo = activo;
+    }
+}
+
+------------------------------------------------------------
+
+[FILE] src/main/java/com/minimarket/entity/Pago.java
+------------------------------------------------------------
+package com.minimarket.entity;
+
+import jakarta.persistence.*;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "pago")
+public class Pago {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @OneToOne
+    @JoinColumn(name = "venta_id", nullable = false, unique = true)
+    private Venta venta;
+
+    @ManyToOne
+    @JoinColumn(name = "metodo_pago_id", nullable = false)
+    private MetodoPago metodoPago;
+
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal monto;
+
+    @Column(nullable = false, length = 20)
+    private String estado;
+
+    @Column(length = 100)
+    private String referencia;
+
+    @Column(nullable = false)
+    private LocalDateTime fecha;
+
+    // getters y setters
+    public Long getId() {
+        return id;
+    }
+
+    public Venta getVenta() {
+        return venta;
+    }
+
+    public MetodoPago getMetodoPago() {
+        return metodoPago;
+    }
+
+    public BigDecimal getMonto() {
+        return monto;
+    }
+
+    public String getEstado() {
+        return estado;
+    }
+
+    public String getReferencia() {
+        return referencia;
+    }
+
+    public LocalDateTime getFecha() {
+        return fecha;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public void setVenta(Venta venta) {
+        this.venta = venta;
+    }
+
+    public void setMetodoPago(MetodoPago metodoPago) {
+        this.metodoPago = metodoPago;
+    }
+
+    public void setMonto(BigDecimal monto) {
+        this.monto = monto;
+    }
+
+    public void setEstado(String estado) {
+        this.estado = estado;
+    }
+
+    public void setReferencia(String referencia) {
+        this.referencia = referencia;
+    }
+
+    public void setFecha(LocalDateTime fecha) {
+        this.fecha = fecha;
+    }
+}
+
+------------------------------------------------------------
+
+[FILE] src/main/java/com/minimarket/entity/Producto.java
+------------------------------------------------------------
+package com.minimarket.entity;
+
+import jakarta.persistence.*;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "productos")
+public class Producto {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String nombre;
+
+    @Column(columnDefinition = "TEXT")
+    private String descripcion;
+
+    private BigDecimal precio;
+
+    private String imagen;
+
+    private String categoria;
+
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
+
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+    }
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+
+    public String getNombre() { return nombre; }
+    public void setNombre(String nombre) { this.nombre = nombre; }
+
+    public String getDescripcion() { return descripcion; }
+    public void setDescripcion(String descripcion) { this.descripcion = descripcion; }
+
+    public BigDecimal getPrecio() { return precio; }
+    public void setPrecio(BigDecimal precio) { this.precio = precio; }
+
+    public String getImagen() { return imagen; }
+    public void setImagen(String imagen) { this.imagen = imagen; }
+
+    public String getCategoria() { return categoria; }
+    public void setCategoria(String categoria) { this.categoria = categoria; }
+
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+}
+
 ------------------------------------------------------------
 
 [FILE] src/main/java/com/minimarket/entity/Role.java
@@ -762,6 +1431,102 @@ public class Usuario {
 }
 ------------------------------------------------------------
 
+[FILE] src/main/java/com/minimarket/entity/Venta.java
+------------------------------------------------------------
+package com.minimarket.entity;
+
+import jakarta.persistence.*;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Entity
+@Table(name = "venta")
+public class Venta {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal total;
+
+    @Column(nullable = false, length = 20)
+    private String estado;
+
+    @Column(nullable = false)
+    private LocalDateTime fecha;
+
+    @ManyToOne
+    @JoinColumn(name = "vendedor_id", nullable = false)
+    private Usuario vendedor;
+
+    @OneToMany(mappedBy = "venta", cascade = CascadeType.ALL)
+    private List<DetalleVenta> detalles;
+
+    @OneToOne(mappedBy = "venta", cascade = CascadeType.ALL)
+    private Pago pago;
+
+    // getters y setters
+    public Long getId() {
+        return id;
+    }
+
+    public BigDecimal getTotal() {
+        return total;
+    }
+
+    public String getEstado() {
+        return estado;
+    }
+
+    public LocalDateTime getFecha() {
+        return fecha;
+    }
+
+    public Usuario getVendedor() {
+        return vendedor;
+    }
+
+    public List<DetalleVenta> getDetalles() {
+        return detalles;
+    }
+
+    public Pago getPago() {
+        return pago;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public void setTotal(BigDecimal total) {
+        this.total = total;
+    }
+
+    public void setEstado(String estado) {
+        this.estado = estado;
+    }
+
+    public void setFecha(LocalDateTime fecha) {
+        this.fecha = fecha;
+    }
+
+    public void setVendedor(Usuario vendedor) {
+        this.vendedor = vendedor;
+    }
+
+    public void setDetalles(List<DetalleVenta> detalles) {
+        this.detalles = detalles;
+    }
+
+    public void setPago(Pago pago) {
+        this.pago = pago;
+    }
+}
+
+------------------------------------------------------------
+
 [FILE] src/main/java/com/minimarket/MinimarketApplication.java
 ------------------------------------------------------------
 package com.minimarket;
@@ -787,6 +1552,58 @@ public class MinimarketApplication {
 ------------------------------------------------------------
 
 [DIR] src/main/java/com/minimarket/repository/
+
+[FILE] src/main/java/com/minimarket/repository/DetalleVentaRepository.java
+------------------------------------------------------------
+package com.minimarket.repository;
+
+import com.minimarket.entity.DetalleVenta;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface DetalleVentaRepository extends JpaRepository<DetalleVenta, Long> {
+}
+
+------------------------------------------------------------
+
+[FILE] src/main/java/com/minimarket/repository/MetodoPagoRepository.java
+------------------------------------------------------------
+package com.minimarket.repository;
+
+import com.minimarket.entity.MetodoPago;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.Optional;
+
+public interface MetodoPagoRepository extends JpaRepository<MetodoPago, Long> {
+    Optional<MetodoPago> findByNombre(String nombre);
+}
+
+------------------------------------------------------------
+
+[FILE] src/main/java/com/minimarket/repository/PagoRepository.java
+------------------------------------------------------------
+package com.minimarket.repository;
+
+import com.minimarket.entity.Pago;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface PagoRepository extends JpaRepository<Pago, Long> {
+}
+
+------------------------------------------------------------
+
+[FILE] src/main/java/com/minimarket/repository/ProductoRepository.java
+------------------------------------------------------------
+package com.minimarket.repository;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import com.minimarket.entity.Producto;
+
+public interface ProductoRepository extends JpaRepository<Producto, Long> {
+}
+
+------------------------------------------------------------
 
 [FILE] src/main/java/com/minimarket/repository/RoleRepository.java
 ------------------------------------------------------------
@@ -820,6 +1637,18 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     Optional<Usuario> findByUsername(String username);
     Boolean existsByUsername(String username);
 }
+------------------------------------------------------------
+
+[FILE] src/main/java/com/minimarket/repository/VentaRepository.java
+------------------------------------------------------------
+package com.minimarket.repository;
+
+import com.minimarket.entity.Venta;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface VentaRepository extends JpaRepository<Venta, Long> {
+}
+
 ------------------------------------------------------------
 
 [DIR] src/main/java/com/minimarket/security/
@@ -1199,39 +2028,43 @@ public class WebSecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                // Habilitar CORS
+                // CORS
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
-                // Deshabilitar CSRF (APIs REST stateless)
+                // CSRF off (API REST)
                 .csrf(csrf -> csrf.disable())
 
-                // Manejar excepciones de autenticación
+                // Manejo de errores de autenticación
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint(unauthorizedHandler))
 
-                // Sin estado (stateless)
+                // Stateless
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-                // Configurar autorizaciones
+                // Autorización
                 .authorizeHttpRequests(auth -> auth
-                        // Endpoints públicos
+                        // Públicos
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/public/**").permitAll()
+                        .requestMatchers("/api/productos/**").permitAll()
                         .requestMatchers("/error").permitAll()
+                        .requestMatchers("/api/test/**").permitAll()
 
-                        // Endpoints protegidos
+
+                        // Protegidos por rol
                         .requestMatchers("/api/admin/**").hasAuthority("ADMIN")
                         .requestMatchers("/api/vendedor/**").hasAnyAuthority("ADMIN", "VENDEDOR")
                         .requestMatchers("/api/almacen/**").hasAnyAuthority("ADMIN", "ALMACENERO")
 
-                        // Cualquier otro requiere autenticación
-                        .anyRequest().authenticated())
+                        // Todo lo demás requiere login
+                        .anyRequest().authenticated()
+                )
 
-                // Proveedor de autenticación
+                // Provider
                 .authenticationProvider(authenticationProvider())
 
-                // Filtro JWT
+                // JWT Filter
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
@@ -1240,32 +2073,23 @@ public class WebSecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        
-        // Orígenes permitidos
+
         configuration.setAllowedOrigins(Arrays.asList(
                 "http://localhost:5500",
                 "http://127.0.0.1:5500",
                 "http://localhost:8080",
                 "http://localhost:3000",
-                "http://localhost:4200", // Angular
-                "http://localhost:5173" // Angular
+                "http://localhost:4200",
+                "http://localhost:5173"
         ));
-        
-        // Métodos HTTP permitidos
+
         configuration.setAllowedMethods(Arrays.asList(
                 "GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"
         ));
-        
-        // Headers permitidos
+
         configuration.setAllowedHeaders(Arrays.asList("*"));
-        
-        // Headers expuestos al cliente
         configuration.setExposedHeaders(Arrays.asList("Authorization"));
-        
-        // Permitir credenciales
         configuration.setAllowCredentials(true);
-        
-        // Tiempo de cache para preflight
         configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
@@ -1274,8 +2098,8 @@ public class WebSecurityConfig {
     }
 
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) 
-            throws Exception {
+    public AuthenticationManager authenticationManager(
+            AuthenticationConfiguration authConfig) throws Exception {
         return authConfig.getAuthenticationManager();
     }
 
@@ -1292,6 +2116,160 @@ public class WebSecurityConfig {
         return authProvider;
     }
 }
+
+------------------------------------------------------------
+
+[DIR] src/main/java/com/minimarket/service/
+
+[FILE] src/main/java/com/minimarket/service/ProductoService.java
+------------------------------------------------------------
+package com.minimarket.service;
+
+import com.minimarket.entity.Producto;
+import com.minimarket.repository.ProductoRepository;
+import org.springframework.lang.NonNull;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Objects;
+
+@Service
+public class ProductoService {
+
+    private final ProductoRepository repository;
+
+    public ProductoService(ProductoRepository repository) {
+        this.repository = repository;
+    }
+
+    public List<Producto> listarProductos() {
+        return repository.findAll();
+    }
+
+    public @NonNull Producto guardarProducto(@NonNull Producto producto) {
+        return Objects.requireNonNull(repository.save(producto), "El producto guardado no puede ser nulo");
+    }
+}
+
+------------------------------------------------------------
+
+[FILE] src/main/java/com/minimarket/service/VentaService.java
+------------------------------------------------------------
+package com.minimarket.service;
+
+import com.minimarket.dto.venta.FinalizarVentaRequest;
+import com.minimarket.dto.venta.FinalizarVentaResponse;
+import com.minimarket.entity.*;
+import com.minimarket.repository.*;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
+@Service
+public class VentaService {
+
+    private final VentaRepository ventaRepo;
+    private final DetalleVentaRepository detalleRepo;
+    private final PagoRepository pagoRepo;
+    private final MetodoPagoRepository metodoPagoRepo;
+    private final ProductoRepository productoRepo;
+
+    public VentaService(
+            VentaRepository ventaRepo,
+            DetalleVentaRepository detalleRepo,
+            PagoRepository pagoRepo,
+            MetodoPagoRepository metodoPagoRepo,
+            ProductoRepository productoRepo) {
+        this.ventaRepo = ventaRepo;
+        this.detalleRepo = detalleRepo;
+        this.pagoRepo = pagoRepo;
+        this.metodoPagoRepo = metodoPagoRepo;
+        this.productoRepo = productoRepo;
+    }
+
+    @Transactional
+    public FinalizarVentaResponse finalizarVenta(
+            FinalizarVentaRequest request,
+            Usuario vendedor) {
+        Long metodoPagoId = request.getMetodoPagoId();
+        if (metodoPagoId == null) {
+            throw new RuntimeException("ID de método de pago no puede ser nulo");
+        }
+
+        MetodoPago metodoPago = metodoPagoRepo.findById(metodoPagoId)
+                .orElseThrow(() -> new RuntimeException("Método de pago no existe"));
+
+        if (!metodoPago.getActivo()) {
+            throw new RuntimeException("Método de pago no disponible");
+        }
+
+        if (!metodoPago.getNombre().equals("EFECTIVO")
+                && (request.getReferencia() == null || request.getReferencia().isBlank())) {
+            throw new RuntimeException("Referencia obligatoria para YAPE o PLIN");
+        }
+
+        Venta venta = new Venta();
+        venta.setVendedor(vendedor);
+        venta.setFecha(LocalDateTime.now());
+        venta.setEstado("PENDIENTE_PAGO");
+        venta.setTotal(BigDecimal.ZERO);
+
+        venta = ventaRepo.save(venta);
+
+        BigDecimal total = BigDecimal.ZERO;
+        List<DetalleVenta> detalles = new ArrayList<>();
+
+        for (var item : request.getItems()) {
+            Long productoId = item.getProductoId();
+            if (productoId == null) {
+                throw new RuntimeException("ID de producto no puede ser nulo");
+            }
+            Producto producto = productoRepo.findById(productoId)
+                    .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
+
+            BigDecimal precio = producto.getPrecio(); // precio desde BD
+            BigDecimal subtotal = precio.multiply(BigDecimal.valueOf(item.getCantidad()));
+            total = total.add(subtotal);
+
+            DetalleVenta detalle = new DetalleVenta();
+            detalle.setVenta(venta);
+            detalle.setProducto(producto);
+            detalle.setCantidad(item.getCantidad());
+            detalle.setPrecioUnitario(precio);
+
+            detalles.add(detalle);
+        }
+
+        detalleRepo.saveAll(detalles);
+
+        venta.setTotal(total);
+        venta.setEstado("PAGADO");
+        ventaRepo.save(venta);
+
+        Pago pago = new Pago();
+        pago.setVenta(venta);
+        pago.setMetodoPago(metodoPago);
+        pago.setMonto(total);
+        pago.setEstado("CONFIRMADO");
+        pago.setReferencia(request.getReferencia());
+        pago.setFecha(LocalDateTime.now());
+
+        pagoRepo.save(pago);
+
+        FinalizarVentaResponse response = new FinalizarVentaResponse();
+        response.setVentaId(venta.getId());
+        response.setEstado(venta.getEstado());
+        response.setTotal(total);
+        response.setMetodoPago(metodoPago.getNombre());
+
+        return response;
+    }
+}
+
 ------------------------------------------------------------
 
 [DIR] src/main/resources/
@@ -1367,10 +2345,125 @@ logging:
 
 [DIR] tools/
 
+[FILE] TreePrinter.class
+------------------------------------------------------------
+[ERROR: No se pudo leer el archivo - Input length = 1]
+------------------------------------------------------------
+
+[FILE] TreePrinter.java
+------------------------------------------------------------
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+
+public class TreePrinter {
+
+    // Carpetas a ignorar
+    private static final Set<String> IGNORED_DIRS = new HashSet<>(Arrays.asList(
+            ".git",
+            ".vscode",
+            ".idea",
+            "target",
+            "node_modules",
+            "dist",
+            "build"
+    ));
+
+    // Extensiones de archivos a ignorar
+    private static final Set<String> IGNORED_EXTENSIONS = new HashSet<>(Arrays.asList(
+            ".class",
+            ".log",
+            ".iml",
+            ".lock",
+            ".tmp"
+    ));
+
+    // Archivos específicos a ignorar
+    private static final Set<String> IGNORED_FILES = new HashSet<>(Arrays.asList(
+            ".DS_Store"
+    ));
+
+    public static void main(String[] args) {
+        File root = args.length > 0 ? new File(args[0]) : new File(".");
+
+        if (!root.exists()) {
+            System.err.println("La ruta no existe");
+            return;
+        }
+
+        File output = new File("arbol.txt");
+
+        try (PrintWriter writer = new PrintWriter(new FileWriter(output))) {
+            writer.println(root.getCanonicalFile().getName());
+            printTree(root, "", writer);
+        } catch (IOException e) {
+            System.err.println("Error: " + e.getMessage());
+            return;
+        }
+
+        System.out.println("Archivo arbol.txt creado en: " + output.getAbsolutePath());
+    }
+
+    private static void printTree(File dir, String prefix, PrintWriter writer) {
+        File[] files = dir.listFiles();
+        if (files == null) return;
+
+        Arrays.sort(files, (a, b) -> {
+            if (a.isDirectory() && !b.isDirectory()) return -1;
+            if (!a.isDirectory() && b.isDirectory()) return 1;
+            return a.getName().compareToIgnoreCase(b.getName());
+        });
+
+        for (int i = 0; i < files.length; i++) {
+            File file = files[i];
+            boolean isLast = (i == files.length - 1);
+
+            if (shouldIgnore(file)) continue;
+
+            writer.println(prefix +
+                    (isLast ? "\\-- " : "|-- ") +
+                    file.getName());
+
+            if (file.isDirectory()) {
+                printTree(
+                        file,
+                        prefix + (isLast ? "    " : "|   "),
+                        writer
+                );
+            }
+        }
+    }
+
+    private static boolean shouldIgnore(File file) {
+        String name = file.getName();
+
+        if (file.isDirectory()) {
+            return IGNORED_DIRS.contains(name);
+        }
+
+        if (IGNORED_FILES.contains(name)) {
+            return true;
+        }
+
+        for (String ext : IGNORED_EXTENSIONS) {
+            if (name.endsWith(ext)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+}
+
+------------------------------------------------------------
 
 ================================================================================
 ESTADISTICAS:
-  Carpetas analizadas: 19
-  Archivos incluidos: 25
-  Tamanio total: 63736 caracteres
+  Carpetas analizadas: 21
+  Archivos incluidos: 44
+  Tamanio total: 91605 caracteres
 ================================================================================

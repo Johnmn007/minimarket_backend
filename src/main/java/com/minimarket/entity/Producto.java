@@ -1,4 +1,4 @@
-package com.minimarket.model;
+package com.minimarket.entity;
 
 import jakarta.persistence.*;
 import java.math.BigDecimal;
@@ -29,6 +29,8 @@ public class Producto {
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
+
+        
     }
 
     public Long getId() { return id; }

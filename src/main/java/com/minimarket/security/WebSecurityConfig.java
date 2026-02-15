@@ -61,6 +61,8 @@ public class WebSecurityConfig {
                         .requestMatchers("/api/public/**").permitAll()
                         .requestMatchers("/api/productos/**").permitAll()
                         .requestMatchers("/error").permitAll()
+                        .requestMatchers("/api/test/**").permitAll()
+
 
                         // Protegidos por rol
                         .requestMatchers("/api/admin/**").hasAuthority("ADMIN")

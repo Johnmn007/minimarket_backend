@@ -1,6 +1,6 @@
-package com.minimarket.security.services;
+package com.minimarket.service;
 
-import com.minimarket.model.Producto;
+import com.minimarket.entity.Producto;
 import com.minimarket.repository.ProductoRepository;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
