@@ -28,103 +28,103 @@ import java.util.Arrays;
 @EnableMethodSecurity(prePostEnabled = true)
 public class WebSecurityConfig {
 
-    @Autowired
-    private UserDetailsService userDetailsService;
+        @Autowired
+        private UserDetailsService userDetailsService;
 
-    @Autowired
-    private AuthEntryPointJwt unauthorizedHandler;
+        @Autowired
+        private AuthEntryPointJwt unauthorizedHandler;
 
-    @Autowired
-    private JwtAuthFilter jwtAuthFilter;
+        @Autowired
+        private JwtAuthFilter jwtAuthFilter;
 
-    @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http
-                // CORS
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+        @Bean
+        public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+                http
+                                // CORS
+                                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
-                // CSRF off (API REST)
-                .csrf(csrf -> csrf.disable())
+                                // CSRF off (API REST)
+                                .csrf(csrf -> csrf.disable())
 
-                // Manejo de errores de autenticación
-                .exceptionHandling(exception -> exception
-                        .authenticationEntryPoint(unauthorizedHandler))
+                                // Manejo de errores de autenticación
+                                .exceptionHandling(exception -> exception
+                                                .authenticationEntryPoint(unauthorizedHandler))
 
-                // Stateless
-                .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                                // Stateless
+                                .sessionManagement(session -> session
+                                                .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-                // Autorización
-                .authorizeHttpRequests(auth -> auth
-                        // Públicos
-                        .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/api/public/**").permitAll()
-                        .requestMatchers("/api/productos/**").permitAll()
-                        .requestMatchers("/error").permitAll()
-                        .requestMatchers("/api/test/**").permitAll()
+                                // Autorización
+                                .authorizeHttpRequests(auth -> auth
+                                                // Públicos
+                                                .requestMatchers("/api/auth/**").permitAll()
+                                                .requestMatchers("/api/public/**").permitAll()
+                                                .requestMatchers("/api/productos/**").permitAll()
+                                                .requestMatchers("/error").permitAll()
+                                                .requestMatchers("/api/test/**").permitAll()
 
+                                                .requestMatchers("/api/dashboard/**").hasAuthority("ADMIN")
 
-                        // Protegidos por rol
-                        .requestMatchers("/api/admin/**").hasAuthority("ADMIN")
-                        .requestMatchers("/api/vendedor/**").hasAnyAuthority("ADMIN", "VENDEDOR")
-                        .requestMatchers("/api/almacen/**").hasAnyAuthority("ADMIN", "ALMACENERO")
+                                                // Protegidos por rol
+                                                .requestMatchers("/api/admin/**").hasAuthority("ADMIN")
+                                                .requestMatchers("/api/vendedor/**")
+                                                .hasAnyAuthority("ADMIN", "VENDEDOR")
+                                                .requestMatchers("/api/almacen/**")
+                                                .hasAnyAuthority("ADMIN", "ALMACENERO")
 
-                        // Todo lo demás requiere login
-                        .anyRequest().authenticated()
-                )
+                                                // Todo lo demás requiere login
+                                                .anyRequest().authenticated())
 
-                // Provider
-                .authenticationProvider(authenticationProvider())
+                                // Provider
+                                .authenticationProvider(authenticationProvider())
 
-                // JWT Filter
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                                // JWT Filter
+                                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
-        return http.build();
-    }
+                return http.build();
+        }
 
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
+        @Bean
+        public CorsConfigurationSource corsConfigurationSource() {
+                CorsConfiguration configuration = new CorsConfiguration();
 
-        configuration.setAllowedOrigins(Arrays.asList(
-                "http://localhost:5500",
-                "http://127.0.0.1:5500",
-                "http://localhost:8080",
-                "http://localhost:3000",
-                "http://localhost:4200",
-                "http://localhost:5173"
-        ));
+                configuration.setAllowedOrigins(Arrays.asList(
+                                "http://localhost:5500",
+                                "http://127.0.0.1:5500",
+                                "http://localhost:8080",
+                                "http://localhost:3000",
+                                "http://localhost:4200",
+                                "http://localhost:5173"));
 
-        configuration.setAllowedMethods(Arrays.asList(
-                "GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"
-        ));
+                configuration.setAllowedMethods(Arrays.asList(
+                                "GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
 
-        configuration.setAllowedHeaders(Arrays.asList("*"));
-        configuration.setExposedHeaders(Arrays.asList("Authorization"));
-        configuration.setAllowCredentials(true);
-        configuration.setMaxAge(3600L);
+                configuration.setAllowedHeaders(Arrays.asList("*"));
+                configuration.setExposedHeaders(Arrays.asList("Authorization"));
+                configuration.setAllowCredentials(true);
+                configuration.setMaxAge(3600L);
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
-    }
+                UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+                source.registerCorsConfiguration("/**", configuration);
+                return source;
+        }
 
-    @Bean
-    public AuthenticationManager authenticationManager(
-            AuthenticationConfiguration authConfig) throws Exception {
-        return authConfig.getAuthenticationManager();
-    }
+        @Bean
+        public AuthenticationManager authenticationManager(
+                        AuthenticationConfiguration authConfig) throws Exception {
+                return authConfig.getAuthenticationManager();
+        }
 
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
+        @Bean
+        public PasswordEncoder passwordEncoder() {
+                return new BCryptPasswordEncoder();
+        }
 
-    @Bean
-    public DaoAuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
-        authProvider.setUserDetailsService(userDetailsService);
-        authProvider.setPasswordEncoder(passwordEncoder());
-        return authProvider;
-    }
+        @Bean
+        public DaoAuthenticationProvider authenticationProvider() {
+                DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
+                authProvider.setUserDetailsService(userDetailsService);
+                authProvider.setPasswordEncoder(passwordEncoder());
+                return authProvider;
+        }
 }

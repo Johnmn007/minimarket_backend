@@ -38,21 +38,25 @@ public class VentaService {
     public FinalizarVentaResponse finalizarVenta(
             FinalizarVentaRequest request,
             Usuario vendedor) {
-        Long metodoPagoId = request.getMetodoPagoId();
-        if (metodoPagoId == null) {
+
+        if (request.getMetodoPagoId() == null) {
             throw new RuntimeException("ID de método de pago no puede ser nulo");
         }
 
-        MetodoPago metodoPago = metodoPagoRepo.findById(metodoPagoId)
+        MetodoPago metodoPago = metodoPagoRepo.findById(request.getMetodoPagoId())
                 .orElseThrow(() -> new RuntimeException("Método de pago no existe"));
 
         if (!metodoPago.getActivo()) {
             throw new RuntimeException("Método de pago no disponible");
         }
 
-        if (!metodoPago.getNombre().equals("EFECTIVO")
+        if (!metodoPago.getNombre().equalsIgnoreCase("EFECTIVO")
                 && (request.getReferencia() == null || request.getReferencia().isBlank())) {
             throw new RuntimeException("Referencia obligatoria para YAPE o PLIN");
+        }
+
+        if (request.getItems() == null || request.getItems().isEmpty()) {
+            throw new RuntimeException("La venta debe tener al menos un producto");
         }
 
         Venta venta = new Venta();
@@ -67,21 +71,40 @@ public class VentaService {
         List<DetalleVenta> detalles = new ArrayList<>();
 
         for (var item : request.getItems()) {
-            Long productoId = item.getProductoId();
-            if (productoId == null) {
+
+            if (item.getProductoId() == null) {
                 throw new RuntimeException("ID de producto no puede ser nulo");
             }
-            Producto producto = productoRepo.findById(productoId)
+
+            Producto producto = productoRepo.findById(item.getProductoId())
                     .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
 
-            BigDecimal precio = producto.getPrecio(); // precio desde BD
-            BigDecimal subtotal = precio.multiply(BigDecimal.valueOf(item.getCantidad()));
+            Integer cantidadSolicitada = item.getCantidad();
+
+            if (cantidadSolicitada == null || cantidadSolicitada <= 0) {
+                throw new RuntimeException("Cantidad inválida para producto: " + producto.getNombre());
+            }
+
+            // 🔴 VALIDACIÓN DE STOCK
+            if (producto.getStock() < cantidadSolicitada) {
+                throw new RuntimeException(
+                        "Stock insuficiente para el producto: " + producto.getNombre()
+                                + ". Disponible: " + producto.getStock()
+                );
+            }
+
+            // 🟢 DESCONTAR STOCK
+            producto.setStock(producto.getStock() - cantidadSolicitada);
+            productoRepo.save(producto);
+
+            BigDecimal precio = producto.getPrecio();
+            BigDecimal subtotal = precio.multiply(BigDecimal.valueOf(cantidadSolicitada));
             total = total.add(subtotal);
 
             DetalleVenta detalle = new DetalleVenta();
             detalle.setVenta(venta);
             detalle.setProducto(producto);
-            detalle.setCantidad(item.getCantidad());
+            detalle.setCantidad(cantidadSolicitada);
             detalle.setPrecioUnitario(precio);
 
             detalles.add(detalle);

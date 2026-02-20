@@ -1,7 +1,7 @@
 ================================================================================
 PROYECTO: minimarket_backend
 RUTA: C:\Users\Nvidia\Desktop\minimarket_backend
-FECHA: Sun Feb 15 08:34:51 GMT-05:00 2026
+FECHA: Fri Feb 20 09:05:19 GMT-05:00 2026
 ================================================================================
 
 
@@ -141,8 +141,8 @@ FECHA: Sun Feb 15 08:34:51 GMT-05:00 2026
 
 ------------------------------------------------------------
 
-
 ------------------------------------------------------------
+
 
 [DIR] src/
 
@@ -715,6 +715,183 @@ public class VentaController {
 }
 ------------------------------------------------------------
 
+[DIR] src/main/java/com/minimarket/Dashboard/
+
+[DIR] src/main/java/com/minimarket/Dashboard/Controller/
+
+[FILE] src/main/java/com/minimarket/Dashboard/Controller/DashboardController.java
+------------------------------------------------------------
+package com.minimarket.Dashboard.Controller;
+
+import com.minimarket.Dashboard.dto.DashboardResumenResponse;
+import com.minimarket.Dashboard.Service.DashboardService;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/api/dashboard")
+public class DashboardController {
+
+    private final DashboardService dashboardService;
+
+    public DashboardController(DashboardService dashboardService) {
+        this.dashboardService = dashboardService;
+    }
+
+    @GetMapping("/resumen")
+    @PreAuthorize("hasRole('ADMIN')")
+    public DashboardResumenResponse obtenerResumen() {
+        return dashboardService.obtenerResumen();
+    }
+}
+
+------------------------------------------------------------
+
+[DIR] src/main/java/com/minimarket/Dashboard/dto/
+
+[FILE] src/main/java/com/minimarket/Dashboard/dto/DashboardResumenResponse.java
+------------------------------------------------------------
+package com.minimarket.Dashboard.dto;
+
+import java.math.BigDecimal;
+import java.util.List;
+
+public class DashboardResumenResponse {
+
+    private BigDecimal ventasHoy;
+    private Long cantidadVentasHoy;
+    private List<ProductoStockBajoResponse> productosStockBajo;
+
+    public DashboardResumenResponse() {
+    }
+
+    public BigDecimal getVentasHoy() {
+        return ventasHoy;
+    }
+
+    public void setVentasHoy(BigDecimal ventasHoy) {
+        this.ventasHoy = ventasHoy;
+    }
+
+    public Long getCantidadVentasHoy() {
+        return cantidadVentasHoy;
+    }
+
+    public void setCantidadVentasHoy(Long cantidadVentasHoy) {
+        this.cantidadVentasHoy = cantidadVentasHoy;
+    }
+
+    public List<ProductoStockBajoResponse> getProductosStockBajo() {
+        return productosStockBajo;
+    }
+
+    public void setProductosStockBajo(List<ProductoStockBajoResponse> productosStockBajo) {
+        this.productosStockBajo = productosStockBajo;
+    }
+}
+
+------------------------------------------------------------
+
+[FILE] src/main/java/com/minimarket/Dashboard/dto/ProductoStockBajoResponse.java
+------------------------------------------------------------
+package com.minimarket.Dashboard.dto;
+
+public class ProductoStockBajoResponse {
+
+    private Long id;
+    private String nombre;
+    private Integer stock;
+
+    public ProductoStockBajoResponse() {
+    }
+
+    public ProductoStockBajoResponse(Long id, String nombre, Integer stock) {
+        this.id = id;
+        this.nombre = nombre;
+        this.stock = stock;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getNombre() {
+        return nombre;
+    }
+
+    public void setNombre(String nombre) {
+        this.nombre = nombre;
+    }
+
+    public Integer getStock() {
+        return stock;
+    }
+
+    public void setStock(Integer stock) {
+        this.stock = stock;
+    }
+}
+
+------------------------------------------------------------
+
+[DIR] src/main/java/com/minimarket/Dashboard/Service/
+
+[FILE] src/main/java/com/minimarket/Dashboard/Service/DashboardService.java
+------------------------------------------------------------
+package com.minimarket.Dashboard.Service;
+
+import com.minimarket.Dashboard.dto.DashboardResumenResponse;
+import com.minimarket.Dashboard.dto.ProductoStockBajoResponse;
+import com.minimarket.entity.Producto;
+import com.minimarket.repository.ProductoRepository;
+import com.minimarket.repository.VentaRepository;
+import org.springframework.stereotype.Service;
+
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+public class DashboardService {
+
+    private final VentaRepository ventaRepo;
+    private final ProductoRepository productoRepo;
+
+    public DashboardService(VentaRepository ventaRepo,
+            ProductoRepository productoRepo) {
+        this.ventaRepo = ventaRepo;
+        this.productoRepo = productoRepo;
+    }
+
+    public DashboardResumenResponse obtenerResumen() {
+
+        BigDecimal totalHoy = ventaRepo.totalVentasHoy();
+        Long cantidadHoy = ventaRepo.cantidadVentasHoy();
+
+        List<ProductoStockBajoResponse> stockBajo = productoRepo.findAll()
+                .stream()
+                .filter(p -> p.getStock() <= p.getStockMinimo())
+                .map(p -> new ProductoStockBajoResponse(
+                        p.getId(),
+                        p.getNombre(),
+                        p.getStock()))
+                .collect(Collectors.toList());
+
+        DashboardResumenResponse response = new DashboardResumenResponse();
+        response.setVentasHoy(totalHoy);
+        response.setCantidadVentasHoy(cantidadHoy);
+        response.setProductosStockBajo(stockBajo);
+
+        return response;
+    }
+}
+
+------------------------------------------------------------
+
 [DIR] src/main/java/com/minimarket/dto/
 
 [DIR] src/main/java/com/minimarket/dto/request/
@@ -1233,31 +1410,89 @@ public class Producto {
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
+    @Column(nullable = false)
+    private Integer stock = 0;
+
+    @Column(nullable = false)
+    private Integer stockMinimo = 5;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
     }
 
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    public Long getId() {
+        return id;
+    }
 
-    public String getNombre() { return nombre; }
-    public void setNombre(String nombre) { this.nombre = nombre; }
+    public void setId(Long id) {
+        this.id = id;
+    }
 
-    public String getDescripcion() { return descripcion; }
-    public void setDescripcion(String descripcion) { this.descripcion = descripcion; }
+    public String getNombre() {
+        return nombre;
+    }
 
-    public BigDecimal getPrecio() { return precio; }
-    public void setPrecio(BigDecimal precio) { this.precio = precio; }
+    public void setNombre(String nombre) {
+        this.nombre = nombre;
+    }
 
-    public String getImagen() { return imagen; }
-    public void setImagen(String imagen) { this.imagen = imagen; }
+    public String getDescripcion() {
+        return descripcion;
+    }
 
-    public String getCategoria() { return categoria; }
-    public void setCategoria(String categoria) { this.categoria = categoria; }
+    public void setDescripcion(String descripcion) {
+        this.descripcion = descripcion;
+    }
 
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public BigDecimal getPrecio() {
+        return precio;
+    }
+
+    public void setPrecio(BigDecimal precio) {
+        this.precio = precio;
+    }
+
+    public String getImagen() {
+        return imagen;
+    }
+
+    public void setImagen(String imagen) {
+        this.imagen = imagen;
+    }
+
+    public String getCategoria() {
+        return categoria;
+    }
+
+    public void setCategoria(String categoria) {
+        this.categoria = categoria;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public Integer getStock() {
+        return stock;
+    }
+
+    public void setStock(Integer stock) {
+        this.stock = stock;
+    }
+
+    public Integer getStockMinimo() {
+        return stockMinimo;
+    }
+
+    public void setStockMinimo(Integer stockMinimo) {
+        this.stockMinimo = stockMinimo;
+    }
+
 }
 
 ------------------------------------------------------------
@@ -1644,9 +1879,42 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
 package com.minimarket.repository;
 
 import com.minimarket.entity.Venta;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
+
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface VentaRepository extends JpaRepository<Venta, Long> {
+    @Query("""
+            SELECT COALESCE(SUM(v.total),0)
+            FROM Venta v
+            WHERE FUNCTION('DATE', v.fecha) = CURRENT_DATE
+            AND v.estado = 'PAGADO'
+            """)
+    BigDecimal totalVentasHoy();
+
+    @Query("""
+            SELECT COUNT(v)
+            FROM Venta v
+            WHERE FUNCTION('DATE', v.fecha) = CURRENT_DATE
+            AND v.estado = 'PAGADO'
+            """)
+    Long cantidadVentasHoy();
+
+    @Query("SELECT v FROM Venta v WHERE v.fecha BETWEEN :inicio AND :fin AND v.estado = 'PAGADO'")
+    List<Venta> findVentasDelDia(
+            @Param("inicio") LocalDateTime inicio,
+            @Param("fin") LocalDateTime fin);
+
+    @Query("SELECT COALESCE(SUM(v.total),0) FROM Venta v WHERE v.fecha BETWEEN :inicio AND :fin AND v.estado = 'PAGADO'")
+    BigDecimal totalVentasDelDia(
+            @Param("inicio") LocalDateTime inicio,
+            @Param("fin") LocalDateTime fin);
+
 }
 
 ------------------------------------------------------------
@@ -2195,21 +2463,25 @@ public class VentaService {
     public FinalizarVentaResponse finalizarVenta(
             FinalizarVentaRequest request,
             Usuario vendedor) {
-        Long metodoPagoId = request.getMetodoPagoId();
-        if (metodoPagoId == null) {
+
+        if (request.getMetodoPagoId() == null) {
             throw new RuntimeException("ID de método de pago no puede ser nulo");
         }
 
-        MetodoPago metodoPago = metodoPagoRepo.findById(metodoPagoId)
+        MetodoPago metodoPago = metodoPagoRepo.findById(request.getMetodoPagoId())
                 .orElseThrow(() -> new RuntimeException("Método de pago no existe"));
 
         if (!metodoPago.getActivo()) {
             throw new RuntimeException("Método de pago no disponible");
         }
 
-        if (!metodoPago.getNombre().equals("EFECTIVO")
+        if (!metodoPago.getNombre().equalsIgnoreCase("EFECTIVO")
                 && (request.getReferencia() == null || request.getReferencia().isBlank())) {
             throw new RuntimeException("Referencia obligatoria para YAPE o PLIN");
+        }
+
+        if (request.getItems() == null || request.getItems().isEmpty()) {
+            throw new RuntimeException("La venta debe tener al menos un producto");
         }
 
         Venta venta = new Venta();
@@ -2224,21 +2496,40 @@ public class VentaService {
         List<DetalleVenta> detalles = new ArrayList<>();
 
         for (var item : request.getItems()) {
-            Long productoId = item.getProductoId();
-            if (productoId == null) {
+
+            if (item.getProductoId() == null) {
                 throw new RuntimeException("ID de producto no puede ser nulo");
             }
-            Producto producto = productoRepo.findById(productoId)
+
+            Producto producto = productoRepo.findById(item.getProductoId())
                     .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
 
-            BigDecimal precio = producto.getPrecio(); // precio desde BD
-            BigDecimal subtotal = precio.multiply(BigDecimal.valueOf(item.getCantidad()));
+            Integer cantidadSolicitada = item.getCantidad();
+
+            if (cantidadSolicitada == null || cantidadSolicitada <= 0) {
+                throw new RuntimeException("Cantidad inválida para producto: " + producto.getNombre());
+            }
+
+            // 🔴 VALIDACIÓN DE STOCK
+            if (producto.getStock() < cantidadSolicitada) {
+                throw new RuntimeException(
+                        "Stock insuficiente para el producto: " + producto.getNombre()
+                                + ". Disponible: " + producto.getStock()
+                );
+            }
+
+            // 🟢 DESCONTAR STOCK
+            producto.setStock(producto.getStock() - cantidadSolicitada);
+            productoRepo.save(producto);
+
+            BigDecimal precio = producto.getPrecio();
+            BigDecimal subtotal = precio.multiply(BigDecimal.valueOf(cantidadSolicitada));
             total = total.add(subtotal);
 
             DetalleVenta detalle = new DetalleVenta();
             detalle.setVenta(venta);
             detalle.setProducto(producto);
-            detalle.setCantidad(item.getCantidad());
+            detalle.setCantidad(cantidadSolicitada);
             detalle.setPrecioUnitario(precio);
 
             detalles.add(detalle);
@@ -2463,7 +2754,7 @@ public class TreePrinter {
 
 ================================================================================
 ESTADISTICAS:
-  Carpetas analizadas: 21
-  Archivos incluidos: 44
-  Tamanio total: 91605 caracteres
+  Carpetas analizadas: 25
+  Archivos incluidos: 48
+  Tamanio total: 99502 caracteres
 ================================================================================
